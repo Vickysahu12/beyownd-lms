@@ -1,0 +1,12 @@
+# Backend
+beyownd-backend/node_modules/
+beyownd-backend/.env
+
+# Frontend (add these once frontend exists — harmless to include now)
+beyownd-frontend/node_modules/
+beyownd-frontend/.env.local
+beyownd-frontend/.next/
+
+# General
+*.log
+.DS_Store
