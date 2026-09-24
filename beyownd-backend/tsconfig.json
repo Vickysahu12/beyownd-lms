@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings - Node.js backend, ES2020 tak ka JS chalega
+    "module": "commonjs",
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "types": ["node"],
+
+    // Interop - Express jaise CommonJS packages ko cleanly import karne
+    // ke liye zaroori
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    // Stricter Typechecking - yeh sab genuinely achhe hai, rakhte hai
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Outputs
+    "sourceMap": true,
+    "declaration": false
+  }
+}
