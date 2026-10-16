@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | [phases/](phases/) | Code / future you | What we built, why, how it works, done checklist |
 | [interview/](interview/) | You, in an interview | How to explain it, trade-offs, bugs fixed, Q&A |
-| [design/](design/) | Code | Schemas and API route contract (from Phase 0) |
+| [design/](design/) | Code | [user-flow.md](design/user-flow.md) · [schemas.md](design/schemas.md) (every collection) · [api-routes.md](design/api-routes.md) (every endpoint) |
 | [module/](module/) | Code | Early build logs (Day 1, auth module) |
 
 ## Convention

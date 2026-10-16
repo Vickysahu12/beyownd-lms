@@ -59,7 +59,7 @@ Each item: **what** → **why**. The "how" section gets filled in as each item i
 - [x] A1–A14 implemented
 - [x] B1–B6 implemented
 - [x] Tests: signup, verify-otp (incl. wrong-OTP lockout), login (incl. unverified, Google-only account), Google linking (incl. unverified-password clear), forgot/reset password, refresh rotation, logout revocation, onboarding + `requireOnboarding`
-- [ ] C1, C2 written and approved
+- [ ] C1, C2 written and approved — ✍️ written ([schemas.md](../design/schemas.md), [api-routes.md](../design/api-routes.md)), **awaiting approval of decisions D1–D9**
 - [x] "How it works" section below filled in
 - [x] Interview doc filled in (Parts 1–3)
 
