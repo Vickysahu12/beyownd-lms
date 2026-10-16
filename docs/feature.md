@@ -32,7 +32,7 @@ These are the features without which the product doesn't function or the pitch d
 
 ## Won't Have (explicitly out of scope for now — say this out loud so scope doesn't creep)
 
-- Payments/subscriptions (you're running this as a free/community model for now)
+- ~~Payments/subscriptions~~ — **moved to Must Have** (Oct 2026): paid virtual internship program, see [business-model.md](business-model.md) and [roadmap.md](roadmap.md)
 - Mobile app (responsive web is enough for MVP)
 - Live video classes / cohort scheduling
 - Multi-tenant (other orgs white-labeling your platform)

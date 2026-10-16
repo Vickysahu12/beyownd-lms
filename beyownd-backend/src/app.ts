@@ -3,63 +3,76 @@
 // ── YEH FILE KYU HAI ─────────────────────────────────────────────────────
 // Yeh Express APP ko BUILD karta hai - middleware register karna, routes
 // mount karna, error handler lagana. Yeh file SERVER START nahi karti -
-// bas ek "app" object banake export karti hai. server.ts iska "app"
-// import karega aur usko actual port pe listen karayega.
+// bas ek "app" object export karti hai. server.ts isse port pe listen
+// karata hai, aur tests isse directly import karte hai (bina real port ke).
 //
-// Yeh split (app.ts vs server.ts) isliye hai taaki TESTS bhi app.ts ko
-// directly import kar sake, bina ek real port pe server chalaye - jab
-// hum tests likhenge, yeh cheez kaam aayegi.
+// MIDDLEWARE KA ORDER MATTER KARTA HAI - request upar se neeche har
+// middleware se guzarti hai:
+//   trust proxy → request ID/logging → security headers → CORS →
+//   compression → body parsing → cookies → routes → 404 → error handler
 // ────────────────────────────────────────────────────────────────────────
 
-import express, { Application, Request, Response } from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
-import { errorHandler } from './middlewares/errorHandler.middleware';
+import helmet from 'helmet';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import { env } from './config/env';
+import { requestLogger } from './middlewares/requestLogger.middleware';
+import { errorHandler, notFoundHandler } from './middlewares/errorHandler.middleware';
+import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 
 const app: Application = express();
 
-// ---- Middleware ----
-// cors() browser ko allow karta hai frontend (alag origin/port pe chal
-// raha, jaise localhost:3000) se is backend (jaise localhost:5000) ko
-// requests bhejne ki. Bina iske, browser security ki wajah se requests
-// block kar dega.
-app.use(cors());
+// ---- Proxy trust ----
+// Production mein request Nginx se aati hai, to req.ip hamesha Nginx ka
+// IP hota. Yeh setting Express ko X-Forwarded-For header se ASLI client IP
+// padhne deti hai - rate limiter isi pe depend karta hai. Number (hops)
+// diya hai, `true` nahi - `true` se koi bhi client fake header bhej ke
+// apna IP spoof kar sakta hai.
+app.set('trust proxy', env.trustProxy);
 
-// express.json() incoming request body ko automatically JSON se JS object
-// mein parse karta hai - iske bina req.body hamesha undefined milega.
-app.use(express.json());
+// "X-Powered-By: Express" header hatao - attacker ko stack batane ki zaroorat nahi
+app.disable('x-powered-by');
 
-// ---- Health check route ----
-// Yeh route abhi sirf confirm karne ke liye hai ki server zinda hai.
-// Baad mein docker-compose / deployment tools bhi isi tarah ke route se
-// check karenge ki container healthy hai ya nahi (jaisa system design
-// doc mein NFR8 - observability mein likha tha).
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', message: 'Beyownd API is running' });
-});
+// ---- Request ID + logging (sabse pehle, taaki har cheez log ho) ----
+app.use(requestLogger);
 
-// ---- Routes (abhi khali, jaise jaise modules banenge yahan add honge) ----
-// import authRoutes from './routes/auth.routes';
-// app.use('/api/auth', authRoutes);
+// ---- Security headers ----
+// helmet ek saath ~15 security headers set karta hai (HSTS, nosniff,
+// frame-deny, etc.) - common web attacks ke against default protection.
+app.use(helmet());
 
-// ... existing app.use(cors()), app.use(express.json()) ke baad:
+// ---- CORS ----
+// Sirf apne frontend origins allowed (classroom.beyownd.in). credentials:
+// true zaroori hai taaki browser refresh-token cookie bheje. `origin: '*'`
+// aur credentials saath mein kaam hi nahi karte - isliye explicit list.
+app.use(
+  cors({
+    origin: env.corsOrigins,
+    credentials: true,
+  })
+);
+
+// ---- Compression ----
+// JSON responses gzip/brotli hoke jaate hai - 60-80% chhote. Humare
+// students mobile data pe hai, yeh seedha unka data aur load time bachata hai.
+app.use(compression());
+
+// ---- Body parsing ----
+// 100kb limit - koi bhi legit request (signup, quiz answers, onboarding)
+// isse bahut chhoti hai. Bina limit ke koi 50MB JSON bhej ke server ki
+// memory/CPU kha sakta hai.
+app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
 
-// ... /health route ke baad:
+// ---- Routes ----
+app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 
-// ---- 404 handler ----
-// Agar koi bhi request kisi bhi upar wale route se match nahi hoti,
-// yeh catch-all yahan pakad lega, taaki koi bhi galat URL par silent
-// crash ya confusing default Express error na aaye.
-app.use((req: Request, res: Response) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
-});
-
-// ---- Global error handler (HAMESHA sabse aakhir mein lagana hota hai) ----
-// Express ka rule: error-handling middleware sabse last mein register
-// hona chahiye, tabhi yeh poore app ke errors ko catch kar payega.
+// ---- 404 + global error handler (HAMESHA sabse aakhir mein) ----
+app.use(notFoundHandler);
 app.use(errorHandler);
 
 export default app;

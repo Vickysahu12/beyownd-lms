@@ -12,7 +12,7 @@ Self-taught and early-stage developer students (like your Surat community) strug
 
 ## 3. Non-Goals (v1)
 
-- Not a payments/monetization platform yet
+- ~~Not a payments/monetization platform yet~~ — superseded (Oct 2026): paid virtual internship program, see [business-model.md](business-model.md)
 - Not a live-class/cohort scheduling tool
 - Not competing on content breadth (you're not trying to have 500 courses — depth and credibility over volume)
 
