@@ -1,36 +1,40 @@
 // src/models/User.ts
 //
 // ── HOW THIS FILE CONNECTS TO THE REST OF THE APP ──────────────────────────
-// - config/db.ts opens the Mongo connection at server startup; this file just
-//   defines the SHAPE of a user, it doesn't connect to anything itself.
-// - services/auth.service.ts is the ONLY place that queries this model directly
-//   (findOne during login/Google-login, `new User({...})` during signup). It
-//   calls user.comparePassword(...) below rather than importing bcrypt itself.
-//   It's also the place that sets isVerified = true after correct OTP entry,
-//   and skips OTP entirely for Google signups (auth.provider === 'google').
-// - controllers/auth.controller.ts never imports User at all - it only talks
-//   to auth.service.ts.
-// - middlewares/auth.middleware.ts uses this model too - after verifying a JWT
-//   it does User.findById(decoded.id) to fetch the real user and attach it as
-//   req.user for later controllers to read. It will ALSO check isVerified
-//   there and block access if false, for local-signup users who never
-//   finished OTP verification.
+// - Defines the SHAPE of a user. services/auth.service.ts is the main place
+//   that reads/writes it (signup, login, Google link, password reset).
+// - ONE ACCOUNT PER EMAIL: a user can have a password, a Google ID, or both.
+//   `authProviders` records which login methods this account has, e.g.
+//   ['local'] or ['google'] or ['local', 'google']. Rules for linking live in
+//   auth.service.ts and docs/design/user-flow.md.
+// - Password is hashed automatically in the pre('save') hook below - no code
+//   path can store a plaintext password.
+// - Access tokens are only ever issued to verified users, so
+//   middlewares/auth.middleware.ts doesn't need to read this model on every
+//   request (see the comment there).
 // ─────────────────────────────────────────────────────────────────────────
 
 import mongoose, { Document, Schema, Model } from 'mongoose';
 import bcrypt from 'bcrypt';
 
+export type AuthProvider = 'local' | 'google';
+
 export interface IUser extends Document {
   name: string;
   email: string;
   password?: string;
-  authProvider: 'local' | 'google';
+  authProviders: AuthProvider[];
   googleId?: string;
   role: 'student' | 'admin';
   isVerified: boolean;
   createdAt: Date;
+  updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
+
+// bcrypt cost factor. 10 rounds ≈ 50-80ms per hash on a small VPS - slow
+// enough to make offline brute force expensive, fast enough for login.
+export const BCRYPT_ROUNDS = 10;
 
 const userSchema = new Schema<IUser>(
   {
@@ -38,8 +42,9 @@ const userSchema = new Schema<IUser>(
       type: String,
       required: [true, 'Name is required'],
       trim: true,
-      minLength: 3,
-      maxLength: 20,
+      // Indian full names + Google display names can be long; 60 is safe
+      minLength: 2,
+      maxLength: 60,
     },
     email: {
       type: String,
@@ -50,14 +55,12 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      minlength: 6,
+      minLength: 8,
       select: false,
     },
-    authProvider: {
-      type: String,
-      enum: ['local', 'google'],
-      required: true,
-      default: 'local',
+    authProviders: {
+      type: [{ type: String, enum: ['local', 'google'] }],
+      default: [],
     },
     googleId: {
       type: String,
@@ -69,11 +72,8 @@ const userSchema = new Schema<IUser>(
       enum: ['student', 'admin'],
       default: 'student',
     },
-    // NEW FIELD - this is the whole point of today's OTP discussion.
-    // Local signups start as false and can't log in until OTP-verified.
-    // Google signups get created with this already true in auth.service.ts
-    // at signup time - Google itself already proved the email is real, so
-    // there's nothing for us to re-verify.
+    // Local signups start false and can't log in until OTP-verified.
+    // Google sign-in sets it true - Google already proved the email.
     isVerified: {
       type: Boolean,
       default: false,
@@ -82,19 +82,20 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-// ---- HOOK 1: enforce "password required only for local signups" ----
+// ---- HOOK 1: an account with the 'local' method must have a password ----
+// isSelected check: password is `select: false`, so a user loaded normally
+// (e.g. Google linking an existing account) has password === undefined even
+// though one exists in the DB. Only enforce when the field was loaded/set.
 userSchema.pre('validate', function () {
-  if (this.authProvider === 'local' && !this.password) {
-    throw new Error('Password is required for email/password signup');
+  if (this.authProviders.includes('local') && this.isSelected('password') && !this.password) {
+    throw new Error('Password is required for email/password accounts');
   }
 });
 
 // ---- HOOK 2: hash the password before saving ----
 userSchema.pre('save', async function () {
   if (!this.password || !this.isModified('password')) return;
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  this.password = await bcrypt.hash(this.password, BCRYPT_ROUNDS);
 });
 
 userSchema.methods.comparePassword = async function (

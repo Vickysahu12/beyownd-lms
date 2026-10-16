@@ -1,43 +1,66 @@
 // src/utils/generateTokens.ts
 //
 // ── YEH FILE KYU HAI ─────────────────────────────────────────────────────
-// Yeh do chhote functions rakhta hai jo access aur refresh token banate
-// hai. auth.service.ts (agla step) yeh functions call karega login aur
-// signup ke time, aur ek /refresh route bhi inhe call karega jab naya
-// access token chahiye ho. Koi bhi file directly jwt.sign() nahi likhegi -
-// sab yahi se guzrega, taaki agar kabhi token banane ka logic change
-// karna pade (jaise extra data add karna), ek hi jagah badalna padega.
+// Saare JWT sign/verify yahin hote hai - koi aur file directly jwt.sign()
+// nahi likhti.
+//
+// ACCESS token  - 15 min, har API request ke saath (Authorization header).
+//                 Payload: userId + role. Stateless - verify karne ke liye
+//                 DB/Redis nahi chahiye, isliye har request fast.
+// REFRESH token - 7 din, httpOnly cookie mein. Payload: userId + sid
+//                 (session ID) + jti (is token ka unique ID). sid/jti Redis
+//                 se match hote hai (services/session.service.ts) - isse
+//                 rotation aur logout/revocation possible hota hai.
+// Dono alag secrets se sign hote hai - refresh token ko access token ki
+// jagah use nahi kiya ja sakta, aur ulta bhi nahi.
 // ────────────────────────────────────────────────────────────────────────
 
-import jwt, {SignOptions} from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
 
-// Access token payload mein sirf userId aur role rakhte hai - itna hi
-// kaafi hai har request pe "kaun hai yeh" aur "kya allowed hai" check
-// karne ke liye. Zyada data token mein daalna avoid karte hai, kyunki
-// token har request ke saath jaata hai - jitna chhota, utna fast.
-interface TokenPayload {
+export interface AccessTokenPayload {
   userId: string;
   role: string;
 }
 
-export const generateAccessToken = (payload: TokenPayload): string => {
+export interface RefreshTokenPayload {
+  userId: string;
+  sid: string;
+  jti: string;
+}
+
+export const generateAccessToken = (payload: AccessTokenPayload): string => {
   const options: SignOptions = {
     expiresIn: env.jwtAccessExpiry as SignOptions['expiresIn'],
   };
-  return jwt.sign(payload, env.jwtAccessSecret, options);
+  return jwt.sign({ userId: payload.userId, role: payload.role }, env.jwtAccessSecret, options);
 };
 
-export const generateRefreshToken = (payload: TokenPayload): string => {
+export const verifyAccessToken = (token: string): AccessTokenPayload => {
+  return jwt.verify(token, env.jwtAccessSecret) as AccessTokenPayload;
+};
+
+export const generateRefreshToken = (payload: RefreshTokenPayload): string => {
   const options: SignOptions = {
     expiresIn: env.jwtRefreshExpiry as SignOptions['expiresIn'],
   };
-  return jwt.sign(payload, env.jwtRefreshSecret, options);
+  return jwt.sign(
+    { userId: payload.userId, sid: payload.sid, jti: payload.jti },
+    env.jwtRefreshSecret,
+    options
+  );
 };
 
-// Refresh token verify karne ka function - /refresh route isko call
-// karega jab cookie se refresh token milega, yeh check karega ki woh
-// genuine hai aur expire nahi hua.
-export const verifyRefreshToken = (token: string): TokenPayload => {
-  return jwt.verify(token, env.jwtRefreshSecret) as TokenPayload;
+export const verifyRefreshToken = (token: string): RefreshTokenPayload => {
+  return jwt.verify(token, env.jwtRefreshSecret) as RefreshTokenPayload;
+};
+
+// "7d" / "15m" jaisi string ko seconds mein - Redis TTL aur cookie maxAge
+// dono isi se nikalte hai, taaki teeno (JWT, Redis, cookie) ek saath expire hon.
+export const durationToSeconds = (value: string): number => {
+  const match = /^(\d+)\s*([smhd])$/.exec(value.trim());
+  if (!match) throw new Error(`Unsupported duration format: ${value}`);
+  const amount = Number(match[1]);
+  const unit = { s: 1, m: 60, h: 3600, d: 86400 }[match[2] as 's' | 'm' | 'h' | 'd'];
+  return amount * unit;
 };

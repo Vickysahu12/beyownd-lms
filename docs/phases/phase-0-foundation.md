@@ -1,7 +1,7 @@
 # Phase 0 — Foundation & Hardening
 
 **Dates:** Oct 15 – 16, 2026
-**Status:** 🟡 In progress — Part 1 (shared plumbing) done
+**Status:** 🟡 In progress — Part 1 (plumbing) + Part 2 (auth) done; Part 3 (onboarding) + design docs next
 **Interview doc:** [../interview/phase-0-foundation.md](../interview/phase-0-foundation.md)
 
 ## Goal
@@ -56,8 +56,8 @@ Each item: **what** → **why**. The "how" section gets filled in as each item i
 
 ## Done checklist
 
-- [ ] A1–A14 implemented
-- [ ] B1–B6 implemented
+- [ ] A1–A14 implemented (A1–A11 ✅, A12–A14 onboarding pending)
+- [x] B1–B6 implemented
 - [ ] Tests: signup, verify-otp (incl. wrong-OTP lockout), login (incl. unverified, Google-only account), Google linking (incl. unverified-password clear), forgot/reset password, refresh rotation, logout revocation, onboarding + `requireOnboarding`
 - [ ] C1, C2 written and approved
 - [ ] "How it works" section below filled in
@@ -107,3 +107,76 @@ Logging goes first so even rejected requests (bad CORS, oversized body) get a re
 Dev-environment note: Atlas access list is per-IP and the dev machine is on a mobile network whose IP changes — re-add the current IP when Mongo fails to connect. Production will only allow the VPS's static IP.
 
 **Scalability notes:** stateless (nothing in process memory), pool sized so 2–4 instances stay under Atlas connection limits, compression for mobile data, body limit protects memory, keep-alive tuned to avoid 502s behind Nginx, readiness lets a load balancer drain a bad instance instead of restart-looping it.
+
+### Part 2 — Auth fixes ✅ (Oct 16)
+
+**Built:** A1–A4, A6–A11 (A5 changed by decision, see below), B5, B6 (tests), plus 5 extra bugs found while fixing.
+
+#### Bugs found while working (not in the original list)
+
+| Bug | Impact | Fix |
+| --- | --- | --- |
+| All rate limiters shared the default Redis prefix `rl:` | Signup, login and resend-OTP ate from **one** counter per IP — resending an OTP twice used up login attempts | Each limiter has its own prefix (`rl:login-email:`, …) |
+| Resend SDK returns `{ error }` instead of throwing; we never checked it | Signup said "OTP sent" even when the email failed | Check `error`, throw `AppError(503, EMAIL_FAILED)` |
+| Google `email_verified` never checked | Linking an account to a Google login is only safe if Google verified the email | Reject unless `email_verified === true` |
+| `normalizeEmail()` strips Gmail dots | `john.doe@gmail.com` stored as `johndoe@gmail.com`; Google login (with dots) wouldn't match → duplicate accounts | Only `trim` + `toLowerCase` |
+| `.escape()` on name | `Anita D'Souza` stored as `Anita D&#x27;Souza` — would print on certificates | Removed; XSS is prevented at output (React escapes), not by corrupting input |
+
+#### Decision change: A5 (`protect`)
+
+Planned: `protect` checks `isVerified` with a Redis cache. **Built instead:** `protect` is pure JWT verification — no DB, no Redis. Access tokens are only ever issued to verified users (verify-otp, login and Google all require it), so the check is guaranteed by construction. Every authenticated request saves a network round trip. Trade-off: a role change or account deletion takes effect at the next refresh (≤ 15 min). Refresh reloads the user from the DB.
+
+#### How each piece works
+
+| Area | Files | How |
+| --- | --- | --- |
+| OTP | [utils/otp.util.ts](../../beyownd-backend/src/utils/otp.util.ts) | `crypto.randomInt`; stored as SHA-256 hash in a Redis hash `otp:<purpose>:<email>` with `attempts`; `HINCRBY` (atomic) → 6th attempt burns the OTP; `timingSafeEqual`; deleted on success; `SET NX EX 60` cooldown per purpose+email |
+| Sessions | [services/session.service.ts](../../beyownd-backend/src/services/session.service.ts) | Refresh JWT carries `sid` + `jti`. Redis `session:<sid>` = `{ userId, jti, prevJti, rotatedAt }`, `user_sessions:<userId>` = set of sids. Refresh → new `jti` (rotation). Old `jti` within 10 s → treated as two tabs refreshing together; after 10 s → reuse = theft → session revoked. Logout deletes the session; password reset deletes all sessions |
+| Tokens | [utils/generateTokens.ts](../../beyownd-backend/src/utils/generateTokens.ts) | Separate secrets for access/refresh; JWT expiry, Redis TTL and cookie `maxAge` derived from the same `JWT_REFRESH_EXPIRY` |
+| Account rules | [services/auth.service.ts](../../beyownd-backend/src/services/auth.service.ts) | One account per email; rules from [user-flow.md §3](../design/user-flow.md). Takeover fix: Google linking an unverified account clears its password. Dummy bcrypt compare when the email doesn't exist (no timing-based enumeration) |
+| Cookie | [controllers/auth.controller.ts](../../beyownd-backend/src/controllers/auth.controller.ts) | `httpOnly`, `secure` in prod, `sameSite: strict`, `path: /api/auth` (only sent to auth routes); cleared on failed refresh |
+| Rate limits | [middlewares/rateLimiter.middleware.ts](../../beyownd-backend/src/middlewares/rateLimiter.middleware.ts) | Two layers per route: strict per IP+email, loose per IP (campus Wi-Fi). IPv6 grouped by /56 |
+| Validation | [validators/auth.validator.ts](../../beyownd-backend/src/validators/auth.validator.ts) | Name 2–60, Unicode letters + `. ' -`; password 8–64 (bcrypt reads only 72 bytes) |
+| Model | [models/user.model.ts](../../beyownd-backend/src/models/user.model.ts) | `authProvider` → `authProviders[]`; migration [001-auth-providers.ts](../../beyownd-backend/scripts/migrations/001-auth-providers.ts) (idempotent, run on dev DB: 1 user migrated, second run 0) |
+
+#### Endpoints
+
+| Route | Limiter | Notes |
+| --- | --- | --- |
+| `POST /api/auth/signup` | 5/h per IP+email, 100/h per IP | 201; unverified re-signup overwrites; 409 `EMAIL_TAKEN` / `GOOGLE_ACCOUNT` |
+| `POST /api/auth/verify-otp` | 15/15m per IP+email, 300/15m per IP | Sets cookie, returns `accessToken` |
+| `POST /api/auth/resend-otp` | 5/h per IP+email, 100/h per IP | Generic message; 429 `OTP_COOLDOWN` within 60 s |
+| `POST /api/auth/login` | 10/15m per IP+email, 200/15m per IP | 401 `INVALID_CREDENTIALS`, 403 `EMAIL_NOT_VERIFIED`, 400 `USE_GOOGLE_SIGNIN` |
+| `POST /api/auth/google` | 300/15m per IP | Create / link |
+| `POST /api/auth/refresh` | 300/15m per IP | Rotates; 401 `SESSION_INVALID` / `SESSION_REUSED` |
+| `POST /api/auth/logout` | — | Revokes session |
+| `POST /api/auth/forgot-password` | same as resend | Generic message |
+| `POST /api/auth/reset-password` | same as verify | Revokes all sessions |
+
+#### Tests
+
+[tests/auth.test.ts](../../beyownd-backend/tests/auth.test.ts) — real app + in-memory MongoDB + local Redis (DB 15); only email sending and Google verification are mocked. Run: `npm test` (Redis container must be running).
+
+**Result (Oct 16):** 35 / 35 passing in ~15 s.
+
+| Group | Tests | What they prove |
+| --- | --- | --- |
+| Signup | 7 | Hashing, OTP sent, 2-char + apostrophe names stored unescaped, Gmail dots kept, unverified re-signup, 409 on verified, 503 on email failure + retry works |
+| OTP | 6 | Cookie flags (HttpOnly, Path, SameSite), wrong OTP 400, **burned after 5 wrong attempts even for the right code**, one-time use, 60 s cooldown, no enumeration |
+| Login | 3 | 401 (not 500) with identical message for wrong password vs unknown email, 403 unverified, success |
+| Sessions | 5 | Rotation, two-tab grace window, **reuse after 10 s kills the whole session**, logout revokes server-side |
+| Google | 4 | New account, linking keeps both methods, **takeover fix**, Google-only guidance |
+| Reset | 4 | No enumeration, verify-OTP can't reset, reset revokes all sessions, Google user can set a password |
+| Rate limits | 2 | 11th attempt on one account blocked while **another student on the same IP still logs in**; separate counters per limiter |
+| Middleware | 4 | No token, `TOKEN_EXPIRED`, refresh token rejected as access token, roles |
+
+#### Bugs the tests caught
+
+| Bug | Fix |
+| --- | --- |
+| Linking Google to an existing **verified** account returned 500: the user is loaded without `password` (`select: false`), so the "local accounts need a password" hook saw `undefined` | Hook only checks when `isSelected('password')` |
+| All tests hung: MongoDB driver 7 loads `os` via dynamic `import()`, which Jest's vm sandbox rejects → handshake sent no `driver` metadata → server refused ("Missing required sub-document 'driver'") | Test setup passes `runtimeAdapters: { os }` to the driver. Production unaffected |
+
+Safety: test setup refuses to run unless MongoDB and Redis URIs are local (`127.0.0.1`/`localhost`) — the cleanup step deletes all collections, so it must never touch Atlas. Tests use Redis DB 15, not the dev DB 0.
+
+Dev note: `mongodb-memory-server` downloads an ~800 MB MongoDB zip once (cached in `node_modules/.cache`, zip removed after extract). Expect this on a fresh `npm install`.

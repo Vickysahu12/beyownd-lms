@@ -17,6 +17,7 @@ export const validate = (req: Request, res: Response, next: NextFunction) => {
     return res.status(400).json({
       success: false,
       message: 'Validation failed',
+      code: 'VALIDATION_ERROR',
       errors: errors.array().map((err) => ({
         field: err.type === 'field' ? err.path : undefined,
         message: err.msg,

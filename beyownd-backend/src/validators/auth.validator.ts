@@ -1,74 +1,76 @@
 // src/validators/auth.validator.ts
 //
 // ── YEH FILE KYU HAI ─────────────────────────────────────────────────────
-// Yahan har auth request ki FORMAT validation hoti hai - field required
-// hai ya nahi, sahi type ka hai ya nahi, sahi pattern follow karta hai ya
-// nahi. Yeh sirf "shape" check karta hai - "email@example.com jaisa
-// dikhta hai" - yeh CHECK NAHI karta ki woh email database mein already
-// registered hai ya nahi, kyunki uske liye database call chahiye, jo
-// service layer ka kaam hai, validator ka nahi. Yeh separation jaanbujh
-// ke hai - validator fast aur database-independent rehta hai.
+// Har auth request ki FORMAT validation - field hai ya nahi, sahi type,
+// sahi pattern. Database check (email registered hai ya nahi) yahan NAHI
+// hota - woh service ka kaam hai. Validator fast aur DB-independent rehta hai.
+//
+// Do jaanbujh ke kiye gaye decisions:
+// 1. Name pe .escape() NAHI - "O'Brien" DB mein "O&#x27;Brien" ban jaata
+//    aur wahi certificate pe chhapta. XSS se bachav OUTPUT pe hota hai
+//    (React khud escape karta hai), input data ko kharab karke nahi.
+// 2. Email pe normalizeEmail() NAHI - woh Gmail ke dots hata deta hai
+//    (john.doe@gmail.com → johndoe@gmail.com). Phir Google login ka email
+//    (dots ke saath) match nahi hota aur ek hi insaan ke DO accounts ban
+//    jaate. Sirf trim + lowercase.
 // ────────────────────────────────────────────────────────────────────────
 
 import { body } from 'express-validator';
 
-export const signupValidator = [
-  body('name')
-    .trim()
-    .notEmpty().withMessage('Name is required').bail()
-    .isLength({ min: 5, max: 20 }).withMessage('Name must be 5-20 characters').bail()
-    .escape(), // XSS protection - HTML characters ko encode kar deta hai
-               // (<script> jaisa kuch daala to woh harmless text ban jayega)
-
+const emailRule = () =>
   body('email')
+    .isString().withMessage('Email is required').bail()
     .trim()
+    .toLowerCase()
     .notEmpty().withMessage('Email is required').bail()
-    .isEmail().withMessage('Invalid email format').bail()
-    .normalizeEmail(), // "John+test@Gmail.com" ko "johntest@gmail.com" jaisa
-                        // consistent format mein convert karta hai - isse
-                        // duplicate accounts alag-alag casing se nahi banenge
+    .isLength({ max: 254 }).withMessage('Email is too long').bail()
+    .isEmail().withMessage('Invalid email format');
 
-  body('password')
-    .notEmpty().withMessage('Password is required')
-    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+// bcrypt sirf pehle 72 bytes dekhta hai - 64 chars max taaki lamba password
+// chupchap truncate na ho
+const newPasswordRule = (field = 'password') =>
+  body(field)
+    .isString().withMessage('Password is required').bail()
+    .isLength({ min: 8, max: 64 }).withMessage('Password must be 8-64 characters').bail()
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
     .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
     .matches(/[0-9]/).withMessage('Password must contain at least one number')
-    .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character'),
+    .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character');
+
+const otpRule = () =>
+  body('otp')
+    .isString().withMessage('OTP is required').bail()
+    .trim()
+    .isLength({ min: 6, max: 6 }).withMessage('OTP must be exactly 6 digits').bail()
+    .isNumeric().withMessage('OTP must contain only numbers');
+
+export const signupValidator = [
+  body('name')
+    .isString().withMessage('Name is required').bail()
+    .trim()
+    .isLength({ min: 2, max: 60 }).withMessage('Name must be 2-60 characters').bail()
+    // Letters (koi bhi language), space, dot, apostrophe, hyphen
+    .matches(/^[\p{L}\p{M} .'-]+$/u).withMessage('Name can only contain letters, spaces, . \' -'),
+  emailRule(),
+  newPasswordRule(),
 ];
 
 export const loginValidator = [
-  body('email')
-    .trim()
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Invalid email format')
-    .normalizeEmail(),
-
+  emailRule(),
+  // Login pe password STRENGTH check nahi - sirf present hai ya nahi
   body('password')
-    .notEmpty().withMessage('Password is required'),
-    // Login mein password ki STRENGTH dobara check nahi karte - sirf
-    // "present hai ya nahi". Strength sirf SIGNUP time pe matter karti
-    // hai jab password set ho raha hai.
+    .isString().withMessage('Password is required').bail()
+    .isLength({ min: 1, max: 128 }).withMessage('Password is required'),
 ];
 
-export const verifyOtpValidator = [
-  body('email')
-    .trim()
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Invalid email format')
-    .normalizeEmail(),
+export const verifyOtpValidator = [emailRule(), otpRule()];
 
-  body('otp')
-    .trim()
-    .notEmpty().withMessage('OTP is required')
-    .isLength({ min: 6, max: 6 }).withMessage('OTP must be exactly 6 digits')
-    .isNumeric().withMessage('OTP must contain only numbers'),
-];
+export const emailOnlyValidator = [emailRule()];
 
-export const resendOtpValidator = [
-  body('email')
-    .trim()
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Invalid email format')
-    .normalizeEmail(),
+export const resetPasswordValidator = [emailRule(), otpRule(), newPasswordRule()];
+
+export const googleLoginValidator = [
+  body('idToken')
+    .isString().withMessage('Google token is required').bail()
+    .isLength({ min: 20, max: 4096 }).withMessage('Invalid Google token'),
 ];

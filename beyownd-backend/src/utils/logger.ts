@@ -31,7 +31,10 @@ export const logger = pino({
     ],
     censor: '[Redacted]',
   },
-  transport: env.isProduction
-    ? undefined
-    : { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:HH:MM:ss' } },
+  // Pretty output sirf local dev mein. Production = raw JSON (log tools ke
+  // liye), tests = koi extra worker thread nahi (Jest open handles).
+  transport:
+    env.isProduction || env.nodeEnv === 'test'
+      ? undefined
+      : { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:HH:MM:ss' } },
 });

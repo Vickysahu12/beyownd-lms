@@ -23,5 +23,7 @@
     // Outputs
     "sourceMap": true,
     "declaration": false
-  }
+  },
+  // Sirf app code build hota hai - tests/ aur scripts/ dist mein nahi jaate
+  "include": ["src/**/*"]
 }

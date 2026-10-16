@@ -1,69 +1,96 @@
 // src/controllers/auth.controller.ts
 // Thin layer - request se data nikalna, service call karna, response
 // bhejna. Koi business logic yahan nahi, sab auth.service.ts mein hai.
+//
+// try/catch nahi hai - Express 5 async handler ka rejected promise khud
+// errorHandler middleware tak bhej deta hai.
 
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, CookieOptions } from 'express';
 import * as authService from '../services/auth.service';
+import { REFRESH_TTL_SECONDS } from '../services/session.service';
 import { env } from '../config/env';
+import { AppError } from '../utils/AppError';
 
-const REFRESH_COOKIE_OPTIONS = {
+const REFRESH_COOKIE = 'refreshToken';
+
+// path '/api/auth' - cookie sirf auth routes pe jaati hai, baaki har API
+// call pe nahi (kam exposure, chhoti requests).
+// sameSite 'strict' - classroom.beyownd.in aur api.beyownd.in same-site
+// hai, to cookie kaam karegi, lekin kisi doosri site se aayi request ke
+// saath kabhi nahi jaayegi (CSRF protection).
+const cookieBase: CookieOptions = {
   httpOnly: true,
-  secure: env.nodeEnv === 'production',
-  sameSite: 'strict' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  secure: env.isProduction,
+  sameSite: 'strict',
+  path: '/api/auth',
 };
 
-export const signup = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { name, email, password } = req.body;
-    const result = await authService.signup(name, email, password);
-    res.status(201).json({ success: true, ...result });
-  } catch (err) { next(err); }
+const setRefreshCookie = (res: Response, token: string) => {
+  res.cookie(REFRESH_COOKIE, token, { ...cookieBase, maxAge: REFRESH_TTL_SECONDS * 1000 });
 };
 
-export const verifyOtp = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, otp } = req.body;
-    const { user, accessToken, refreshToken } = await authService.verifyOtpAndActivate(email, otp);
-    res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
-    res.status(200).json({ success: true, user, accessToken });
-  } catch (err) { next(err); }
+const clearRefreshCookie = (res: Response) => {
+  res.clearCookie(REFRESH_COOKIE, cookieBase);
 };
 
-export const resendOtp = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const result = await authService.resendOtp(req.body.email);
-    res.status(200).json({ success: true, ...result });
-  } catch (err) { next(err); }
+// Login jaise saare flows ka common response: refresh → cookie, baaki → body
+const sendAuth = (res: Response, result: authService.AuthResult, status = 200) => {
+  setRefreshCookie(res, result.refreshToken);
+  res.status(status).json({ success: true, user: result.user, accessToken: result.accessToken });
 };
 
-export const login = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, password } = req.body;
-    const { user, accessToken, refreshToken } = await authService.login(email, password);
-    res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
-    res.status(200).json({ success: true, user, accessToken });
-  } catch (err) { next(err); }
+export const signup = async (req: Request, res: Response) => {
+  const { name, email, password } = req.body;
+  const result = await authService.signup(name, email, password);
+  res.status(201).json({ success: true, ...result });
 };
 
-export const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { user, accessToken, refreshToken } = await authService.googleLogin(req.body.idToken);
-    res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
-    res.status(200).json({ success: true, user, accessToken });
-  } catch (err) { next(err); }
+export const verifyOtp = async (req: Request, res: Response) => {
+  const { email, otp } = req.body;
+  sendAuth(res, await authService.verifyEmail(email, otp));
 };
 
-export const refresh = async (req: Request, res: Response, next: NextFunction) => {
+export const resendOtp = async (req: Request, res: Response) => {
+  const result = await authService.resendVerificationOtp(req.body.email);
+  res.status(200).json({ success: true, ...result });
+};
+
+export const login = async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+  sendAuth(res, await authService.login(email, password));
+};
+
+export const googleLogin = async (req: Request, res: Response) => {
+  sendAuth(res, await authService.googleLogin(req.body.idToken));
+};
+
+export const refresh = async (req: Request, res: Response) => {
+  const token = req.cookies?.[REFRESH_COOKIE];
+  if (!token) throw AppError.unauthorized('Session expired. Please log in again.', 'SESSION_INVALID');
+
   try {
-    const token = req.cookies.refreshToken;
-    if (!token) throw new Error('No refresh token provided');
-    const result = await authService.refreshAccessToken(token);
-    res.status(200).json({ success: true, ...result });
-  } catch (err) { next(err); }
+    sendAuth(res, await authService.refresh(token));
+  } catch (err) {
+    // Invalid session - browser mein pada bekaar cookie bhi hata do
+    clearRefreshCookie(res);
+    throw err;
+  }
 };
 
 export const logout = async (req: Request, res: Response) => {
-  res.clearCookie('refreshToken');
+  await authService.logout(req.cookies?.[REFRESH_COOKIE]);
+  clearRefreshCookie(res);
   res.status(200).json({ success: true, message: 'Logged out successfully' });
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const result = await authService.forgotPassword(req.body.email);
+  res.status(200).json({ success: true, ...result });
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { email, otp, password } = req.body;
+  const result = await authService.resetPassword(email, otp, password);
+  clearRefreshCookie(res);
+  res.status(200).json({ success: true, ...result });
 };
