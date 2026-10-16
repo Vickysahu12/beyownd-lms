@@ -22,6 +22,8 @@ import { requestLogger } from './middlewares/requestLogger.middleware';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.middleware';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
+import collegeRoutes from './routes/college.routes';
 
 const app: Application = express();
 
@@ -70,6 +72,8 @@ app.use(cookieParser());
 // ---- Routes ----
 app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/colleges', collegeRoutes);
 
 // ---- 404 + global error handler (HAMESHA sabse aakhir mein) ----
 app.use(notFoundHandler);

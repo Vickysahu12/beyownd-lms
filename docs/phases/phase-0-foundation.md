@@ -1,7 +1,7 @@
 # Phase 0 — Foundation & Hardening
 
 **Dates:** Oct 15 – 16, 2026
-**Status:** 🟡 In progress — Part 1 (plumbing) + Part 2 (auth) done; Part 3 (onboarding) + design docs next
+**Status:** 🟡 In progress — Parts 1–3 (plumbing, auth, onboarding) done; design docs (C1, C2) next
 **Interview doc:** [../interview/phase-0-foundation.md](../interview/phase-0-foundation.md)
 
 ## Goal
@@ -56,12 +56,12 @@ Each item: **what** → **why**. The "how" section gets filled in as each item i
 
 ## Done checklist
 
-- [ ] A1–A14 implemented (A1–A11 ✅, A12–A14 onboarding pending)
+- [x] A1–A14 implemented
 - [x] B1–B6 implemented
-- [ ] Tests: signup, verify-otp (incl. wrong-OTP lockout), login (incl. unverified, Google-only account), Google linking (incl. unverified-password clear), forgot/reset password, refresh rotation, logout revocation, onboarding + `requireOnboarding`
+- [x] Tests: signup, verify-otp (incl. wrong-OTP lockout), login (incl. unverified, Google-only account), Google linking (incl. unverified-password clear), forgot/reset password, refresh rotation, logout revocation, onboarding + `requireOnboarding`
 - [ ] C1, C2 written and approved
-- [ ] "How it works" section below filled in
-- [ ] Interview doc filled in
+- [x] "How it works" section below filled in
+- [x] Interview doc filled in (Parts 1–3)
 
 ## How it works
 
@@ -180,3 +180,62 @@ Planned: `protect` checks `isVerified` with a Redis cache. **Built instead:** `p
 Safety: test setup refuses to run unless MongoDB and Redis URIs are local (`127.0.0.1`/`localhost`) — the cleanup step deletes all collections, so it must never touch Atlas. Tests use Redis DB 15, not the dev DB 0.
 
 Dev note: `mongodb-memory-server` downloads an ~800 MB MongoDB zip once (cached in `node_modules/.cache`, zip removed after extract). Expect this on a fresh `npm install`.
+
+### Part 3 — Onboarding ✅ (Oct 16)
+
+**Built:** A12, A13, A14. Flow and field list: [design/user-flow.md](../design/user-flow.md) §4–5.
+
+#### How each piece works
+
+| Area | Files | How |
+| --- | --- | --- |
+| Options | [constants/profile.ts](../../beyownd-backend/src/constants/profile.ts) | Every dropdown list (degree, year, goal, state, interests…) in one file; model enums and validators both import it, so they can't drift apart |
+| Profile storage | [models/user.model.ts](../../beyownd-backend/src/models/user.model.ts) | Embedded `profile` sub-document + `onboardingCompleted` + `onboardedAt`. 1:1 with the user and always read together → `/me` is one indexed read. Index on `profile.collegeId` for admin stats |
+| Colleges | [models/college.model.ts](../../beyownd-backend/src/models/college.model.ts), [services/college.service.ts](../../beyownd-backend/src/services/college.service.ts) | Student-built list. Name normalized (lowercase, no punctuation, single spaces) → unique `normalizedName`. Atomic upsert (+ retry on the duplicate-key race). `words[]` multikey index → every query word must prefix-match a word in the name ("eng pune" finds "Government College of Engineering Pune"). Sorted by `studentCount`. Results cached in Redis 5 min; cache failure falls back to DB. Regex characters in queries are escaped |
+| Endpoints | [services/user.service.ts](../../beyownd-backend/src/services/user.service.ts), [controllers/user.controller.ts](../../beyownd-backend/src/controllers/user.controller.ts) | `GET /me`; `PUT /me/onboarding` (once → second call 409 `ALREADY_ONBOARDED`); `PATCH /me/profile` (only sent fields change; college change moves the student count; `certificateName` blocked with 403 `CERTIFICATE_NAME_LOCKED` once `certificateNameLockedAt` is set) |
+| Validation | [validators/user.validator.ts](../../beyownd-backend/src/validators/user.validator.ts) | One field list builds both the PUT (all required) and PATCH (all optional) rules. Phone normalized to E.164 (`+91…`, must start 6–9). `degreeOther` / `heardFromOther` required when "other" is picked. Interests deduped |
+| Mass assignment | controllers | `matchedData()` passes only validated fields to the service — `role`, `isVerified`, `certificateNameLockedAt` in a request body are dropped |
+| Guard | [middlewares/requireOnboarding.middleware.ts](../../beyownd-backend/src/middlewares/requireOnboarding.middleware.ts) | 403 `ONBOARDING_REQUIRED`. Reads one boolean from the DB. Only for low-frequency routes (enroll, payment), so not put in the JWT — that would force a token refresh right after onboarding |
+| Login response | [services/auth.service.ts](../../beyownd-backend/src/services/auth.service.ts) | `user.onboardingCompleted` in every auth response → frontend redirects to `/onboarding` or `/dashboard` without an extra `/me` call |
+
+#### Response shape
+
+`GET /api/users/me`, `PUT /me/onboarding` and `PATCH /me/profile` all return:
+
+```json
+{
+  "success": true,
+  "user": {
+    "id": "…", "name": "Ravi Kumar", "email": "ravi@example.com", "role": "student",
+    "isVerified": true, "authProviders": ["local"], "onboardingCompleted": true,
+    "profile": {
+      "certificateName": "Ravi Kumar", "certificateNameLocked": false,
+      "phone": "+919876543210", "collegeId": "…", "collegeName": "Govt. College of Engg, Pune",
+      "degree": "btech", "degreeOther": null, "branch": "CSE", "currentYear": "4", "graduationYear": 2027,
+      "city": "Pune", "state": "Maharashtra", "goal": "internship_certificate", "certificateNeededBy": "2027-03",
+      "interestedTracks": ["web_dev", "backend"], "skillLevel": "basics",
+      "heardFrom": "instagram", "heardFromOther": null, "referralCode": "FRIEND-123"
+    }
+  }
+}
+```
+
+`GET /api/colleges?q=pune` → `{ success, colleges: [{ id, name, studentCount }] }` (max 10).
+
+The profile response is an explicit field list (`toProfileResponse`), so a field added to the model later is never sent to the client by accident.
+
+#### Tests
+
+[tests/onboarding.test.ts](../../beyownd-backend/tests/onboarding.test.ts) — 20 tests. Full suite: **55 / 55 passing** (~60 s).
+
+| Group | Tests | What they prove |
+| --- | --- | --- |
+| `/me` | 2 | Auth required; new user shows `onboardingCompleted: false` in both login response and `/me` |
+| Onboarding | 6 | Normalized phone (4 formats), deduped interests, uppercased referral; field-level errors; "other" needs text; Indian mobile rule; mass assignment ignored; only once; login reflects completion |
+| Colleges | 5 | Different formatting → one college; word-prefix search in any order, popular first; regex characters safe; Redis cache; auth required |
+| Profile update | 6 | Onboarding first; partial update; empty/invalid rejected; college change moves counts; "other" text cleared; certificate name lock |
+| Guard | 1 | `requireOnboarding` blocks until onboarding is done |
+
+**Scalability notes:** `/me` = one indexed read by `_id`; college search = indexed prefix query + Redis cache (autocomplete fires on every keystroke — frontend should debounce ~300 ms); the guard costs one tiny read and only on rare routes; `protect` still touches nothing.
+
+**Known limits (fine for launch):** students can create junk college names — admin merge tool can come in Phase 5. `studentCount` is updated outside the user save (approximate stat, not money). At much larger scale, Atlas Search would replace regex prefix search.

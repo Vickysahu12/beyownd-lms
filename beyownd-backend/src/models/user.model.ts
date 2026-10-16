@@ -9,15 +9,46 @@
 //   auth.service.ts and docs/design/user-flow.md.
 // - Password is hashed automatically in the pre('save') hook below - no code
 //   path can store a plaintext password.
+// - `profile` = onboarding answers (college, year, goal...). Embedded, not a
+//   separate collection: it's 1:1 with the user and always read together, so
+//   GET /users/me stays a single indexed read. `onboardingCompleted` drives the
+//   frontend redirect and the requireOnboarding middleware.
 // - Access tokens are only ever issued to verified users, so
 //   middlewares/auth.middleware.ts doesn't need to read this model on every
 //   request (see the comment there).
 // ─────────────────────────────────────────────────────────────────────────
 
-import mongoose, { Document, Schema, Model } from 'mongoose';
+import mongoose, { Document, Schema, Model, Types } from 'mongoose';
 import bcrypt from 'bcrypt';
+import {
+  DEGREES, CURRENT_YEARS, GOALS, SKILL_LEVELS, HEARD_FROM, INTEREST_AREAS, INDIAN_STATES,
+  Degree, CurrentYear, Goal, SkillLevel, HeardFrom, InterestArea, IndianState,
+} from '../constants/profile';
 
 export type AuthProvider = 'local' | 'google';
+
+export interface IProfile {
+  // Certificate pe yahi naam chhapega - pehla credential issue hote hi lock
+  certificateName: string;
+  certificateNameLockedAt?: Date;
+  phone: string; // E.164: +91XXXXXXXXXX
+  collegeId: Types.ObjectId;
+  collegeName: string; // denormalized - /me aur certificates ke liye join nahi chahiye
+  degree: Degree;
+  degreeOther?: string;
+  branch: string;
+  currentYear: CurrentYear;
+  graduationYear: number;
+  city: string;
+  state: IndianState;
+  goal: Goal;
+  certificateNeededBy?: string; // 'YYYY-MM'
+  interestedTracks: InterestArea[];
+  skillLevel: SkillLevel;
+  heardFrom: HeardFrom;
+  heardFromOther?: string;
+  referralCode?: string;
+}
 
 export interface IUser extends Document {
   name: string;
@@ -27,6 +58,9 @@ export interface IUser extends Document {
   googleId?: string;
   role: 'student' | 'admin';
   isVerified: boolean;
+  profile?: IProfile;
+  onboardingCompleted: boolean;
+  onboardedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -35,6 +69,32 @@ export interface IUser extends Document {
 // bcrypt cost factor. 10 rounds ≈ 50-80ms per hash on a small VPS - slow
 // enough to make offline brute force expensive, fast enough for login.
 export const BCRYPT_ROUNDS = 10;
+
+// _id: false - sub-document ko apna alag ID nahi chahiye
+const profileSchema = new Schema<IProfile>(
+  {
+    certificateName: { type: String, required: true, trim: true, minLength: 2, maxLength: 60 },
+    certificateNameLockedAt: { type: Date },
+    phone: { type: String, required: true, match: /^\+91[6-9]\d{9}$/ },
+    collegeId: { type: Schema.Types.ObjectId, ref: 'College', required: true },
+    collegeName: { type: String, required: true, trim: true, maxLength: 150 },
+    degree: { type: String, enum: DEGREES, required: true },
+    degreeOther: { type: String, trim: true, maxLength: 60 },
+    branch: { type: String, required: true, trim: true, maxLength: 60 },
+    currentYear: { type: String, enum: CURRENT_YEARS, required: true },
+    graduationYear: { type: Number, required: true },
+    city: { type: String, required: true, trim: true, maxLength: 60 },
+    state: { type: String, enum: INDIAN_STATES, required: true },
+    goal: { type: String, enum: GOALS, required: true },
+    certificateNeededBy: { type: String, match: /^\d{4}-(0[1-9]|1[0-2])$/ },
+    interestedTracks: { type: [{ type: String, enum: INTEREST_AREAS }], default: [] },
+    skillLevel: { type: String, enum: SKILL_LEVELS, required: true },
+    heardFrom: { type: String, enum: HEARD_FROM, required: true },
+    heardFromOther: { type: String, trim: true, maxLength: 60 },
+    referralCode: { type: String, trim: true, maxLength: 30 },
+  },
+  { _id: false }
+);
 
 const userSchema = new Schema<IUser>(
   {
@@ -78,9 +138,16 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    profile: { type: profileSchema },
+    onboardingCompleted: { type: Boolean, default: false },
+    onboardedAt: { type: Date },
   },
   { timestamps: true }
 );
+
+// Admin stats: "is college ke saare students" - bina index ke poori
+// users collection scan hoti
+userSchema.index({ 'profile.collegeId': 1 });
 
 // ---- HOOK 1: an account with the 'local' method must have a password ----
 // isSelected check: password is `select: false`, so a user loaded normally

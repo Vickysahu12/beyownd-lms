@@ -1,6 +1,6 @@
 # Interview — Phase 0: Auth & Foundation
 
-**Status:** ✅ Parts 1–2 built and tested (35 automated tests passing). Onboarding (Part 3) not yet built — don't claim it.
+**Status:** ✅ Parts 1–3 built and tested — plumbing, auth, onboarding (55 automated tests passing).
 
 ## One-line summary
 
@@ -61,6 +61,31 @@ A: `trust proxy` set to the hop count, not `true`, so I get the real client IP b
 **Q: How do you debug a production issue a student reports?**
 A: Every request has an ID in the `x-request-id` header and in every JSON log line. Logs redact passwords, OTPs, tokens and cookies.
 
+## Onboarding (Part 3)
+
+**What it is (one line):** after first login, a 2-step form collects certificate name, phone, college, degree, year, goal and interests; the backend blocks enroll and payment until it's done.
+
+**Q: Why embed the profile in the user document instead of a separate collection?**
+A: It's strictly 1:1 with the user, small, and always read together. Embedding makes `/me` a single read by `_id`, no join. A separate collection would only make sense if profiles were large, shared, or queried independently — none of those apply.
+
+**Q: How does the college autocomplete work, and why not a fixed list of colleges?**
+A: There's no clean, complete list of tier 3/4 colleges, so students build it. When a student types a college, I normalize the name — lowercase, strip punctuation, collapse spaces — and do an atomic upsert on that normalized name, so "Govt. College of Engg, Pune" and "govt college of engg pune" become one college. For search, each name is split into words with a multikey index; every word the student types must be a prefix of some word in the name, so "eng pune" finds "Government College of Engineering Pune". The first word uses the index, results are sorted by how many students picked that college, and each query is cached in Redis for 5 minutes because the same prefixes get typed constantly.
+
+**Q: Two students submit the same new college at the same moment — what happens?**
+A: Both upserts see "not found" and try to insert; the unique index on the normalized name lets one win and the other gets a duplicate-key error. I catch that specific error and retry the upsert once, which now finds the existing document. One college, no error to the user.
+
+**Q: How do you stop a user from setting fields they shouldn't, like `role: admin`?**
+A: The controller passes only `matchedData()` — the fields that went through a validator — to the service. Anything else in the body is dropped. I have a test that sends `role: 'admin'` and a fake certificate-lock date with an otherwise valid onboarding and checks neither was saved.
+
+**Q: Why lock the certificate name?**
+A: Once a certificate or letter is issued, the name on it is fixed and publicly verifiable. If the profile name could change afterwards, the verify page and the profile would disagree — a trust problem for a credential business. So the first issued document sets a lock date, and any change after that is a 403. Re-sending the same name is allowed so a full-form resubmit doesn't break.
+
+**Q: Why check onboarding with a DB read instead of putting a flag in the JWT?**
+A: The check only guards rare routes — enroll and payment. A flag in the token would be stale right after onboarding, forcing a token refresh in the middle of the flow. One tiny read on a rare route is the simpler correct option; the hot path (`protect` on every request) still touches nothing.
+
+**Q: How do you handle phone numbers?**
+A: Students type them every possible way — with 0, +91, 91, spaces, dashes. A sanitizer normalizes all of them to E.164 (`+91XXXXXXXXXX`) before validation, which also requires an Indian mobile prefix (6–9). E.164 is what WhatsApp and SMS APIs expect, so later notifications need no cleanup.
+
 ## Decisions & trade-offs
 
 - **`protect` is stateless.** Access tokens are only ever issued to verified users, so `protect` only verifies the JWT signature — no DB or Redis call on any authenticated request. Trade-off: a role change or deleted account takes effect at the next refresh (≤ 15 min), where the user is reloaded from the DB. Right call for 1,000 students; I'd add a Redis denylist if instant bans mattered.
@@ -73,7 +98,7 @@ A: Every request has an ID in the `x-request-id` header and in every JSON log li
 ## Testing approach
 
 **Q: How did you test auth?**
-A: 35 integration tests with Jest and Supertest against the real Express app, an in-memory MongoDB, and a real Redis. Only the two external services are mocked — the email provider and Google token verification — so hashing, OTPs, sessions and rate limits run for real. Each test starts from a wiped database. The setup refuses to run unless both databases are local, because the cleanup deletes everything.
+A: 55 integration tests (35 auth, 20 onboarding) with Jest and Supertest against the real Express app, an in-memory MongoDB, and a real Redis. Only the two external services are mocked — the email provider and Google token verification — so hashing, OTPs, sessions and rate limits run for real. Each test starts from a wiped database. The setup refuses to run unless both databases are local, because the cleanup deletes everything.
 
 ## Likely questions + answers
 

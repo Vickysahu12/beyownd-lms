@@ -36,6 +36,9 @@ export interface PublicUser {
   role: string;
   isVerified: boolean;
   authProviders: string[];
+  // Login ke response mein hi - frontend turant /onboarding ya /dashboard
+  // pe bhej sake, alag /me call ke bina
+  onboardingCompleted: boolean;
 }
 
 export interface AuthResult {
@@ -60,6 +63,7 @@ export const toPublicUser = (user: IUser): PublicUser => ({
   role: user.role,
   isVerified: user.isVerified,
   authProviders: [...user.authProviders],
+  onboardingCompleted: user.onboardingCompleted,
 });
 
 // Har successful login ka common end - access token + naya session

@@ -1,6 +1,6 @@
 # User Flow — Landing → Auth → Onboarding → Dashboard
 
-**Status:** ✅ Decided (Oct 15, 2026). Onboarding questions can be changed later without breaking anything (fields are optional at the schema level, required by the onboarding validator).
+**Status:** ✅ Decided (Oct 15, 2026) · ✅ Built (Oct 16, Phase 0 Part 3). To change dropdown options, edit [constants/profile.ts](../../beyownd-backend/src/constants/profile.ts) — model and validator both read from it. Existing users keep their saved answers (`profile` is optional on the user; only the onboarding request requires every field).
 
 ## 1. Domains
 
@@ -63,13 +63,13 @@ Shown once, right after the first successful login (any method). Two short steps
 | Field | Type | Notes |
 | --- | --- | --- |
 | `certificateName` | string, 2–60 | "Name as it should appear on your certificate". Prefilled from Google/signup name. **Locked once any credential is issued.** |
-| `phone` | string | WhatsApp number, Indian mobile format |
-| `college` | string | Autocomplete from colleges other students entered (cached in Redis), free text allowed |
+| `phone` | string | WhatsApp number. Any common format accepted (`098765 43210`, `+91 98765-43210`), stored as E.164 `+919876543210` |
+| `college` | string | Autocomplete from colleges other students entered (cached in Redis), free text allowed. Stored as `collegeId` + `collegeName`; differently formatted names map to one college |
 | `degree` | enum + other | B.Tech, BE, BCA, BSc, MCA, MSc, Diploma, Other |
 | `branch` | string | e.g. CSE, IT, ECE |
 | `currentYear` | enum | 1, 2, 3, 4, passed_out |
 | `graduationYear` | number | 2024–2032 |
-| `city`, `state` | string | |
+| `city`, `state` | string, enum | `state` must be one of the 28 states + 8 UTs |
 
 **Step 2 — Your goal**
 
@@ -77,7 +77,7 @@ Shown once, right after the first successful login (any method). Two short steps
 | --- | --- | --- |
 | `goal` | enum | internship_certificate, learn_skills, job_prep |
 | `certificateNeededBy` | month (YYYY-MM), optional | When the college needs the certificate — used for cohort planning |
-| `interestedTracks` | string[] | e.g. web_dev |
+| `interestedTracks` | enum[], 1–5 | web_dev, frontend, backend, android, data_science, ai_ml, cybersecurity, ui_ux, cloud_devops |
 | `skillLevel` | enum | beginner, basics, confident |
 | `heardFrom` | enum + other | instagram, whatsapp, friend, college, youtube, other |
 | `referralCode` | string, optional | |
