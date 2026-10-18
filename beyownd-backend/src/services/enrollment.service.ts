@@ -29,7 +29,7 @@ import Cohort, { ICohort } from '../models/cohort.model';
 import { AppError } from '../utils/AppError';
 import { getOutline, getLessonContent, Outline, OutlineModule, LessonContent } from './catalog.service';
 
-const ACCESSIBLE_STATUSES = ['active', 'completed'];
+export const ACCESSIBLE_STATUSES = ['active', 'completed'];
 
 // ---- pure helpers (DB nahi chhoote - unit-test friendly) ----
 
@@ -82,7 +82,7 @@ export const computeModuleStates = (outline: Outline, enrollment: IEnrollment): 
   });
 };
 
-const percentComplete = (states: ModuleState[]): number => {
+export const percentComplete = (states: ModuleState[]): number => {
   const total = states.reduce((s, m) => s + m.lessonsTotal, 0);
   if (total === 0) return 0;
   const done = states.reduce((s, m) => s + m.lessonsCompleted, 0);
@@ -92,21 +92,21 @@ const percentComplete = (states: ModuleState[]): number => {
 // ---- loaders ----
 
 // Rule 1: sirf apni enrollment. Galat/doosre ka ID → same 404.
-const loadOwnEnrollment = async (enrollmentId: string, userId: string): Promise<IEnrollment> => {
+export const loadOwnEnrollment = async (enrollmentId: string, userId: string): Promise<IEnrollment> => {
   if (!isValidObjectId(enrollmentId)) throw AppError.notFound('Enrollment not found');
   const enrollment = await Enrollment.findOne({ _id: enrollmentId, userId });
   if (!enrollment) throw AppError.notFound('Enrollment not found');
   return enrollment;
 };
 
-const loadCohort = async (cohortId: Types.ObjectId): Promise<ICohort> => {
+export const loadCohort = async (cohortId: Types.ObjectId): Promise<ICohort> => {
   const cohort = await Cohort.findById(cohortId);
   if (!cohort) throw AppError.notFound('Cohort not found');
   return cohort;
 };
 
 // Rules 2-4 ek jagah - lesson padhna aur complete karna dono yahi use karte hai
-const assertModuleAccessible = (enrollment: IEnrollment, cohort: ICohort, state: ModuleState) => {
+export const assertModuleAccessible = (enrollment: IEnrollment, cohort: ICohort, state: ModuleState) => {
   if (!ACCESSIBLE_STATUSES.includes(enrollment.status)) {
     throw AppError.forbidden('Your enrollment is not active', 'ENROLLMENT_NOT_ACTIVE');
   }
@@ -132,6 +132,56 @@ const resolveLesson = async (enrollment: IEnrollment, lessonId: string) => {
   const state = states.find((s) => s.id === lesson.moduleId);
   if (!state) throw AppError.notFound('Lesson not found');
   return { lesson, outline, states, state };
+};
+
+// Quiz ke liye: module isi enrollment ke course ka ho (outline mein mile)
+export const resolveModule = async (enrollment: IEnrollment, moduleId: string) => {
+  if (!isValidObjectId(moduleId)) throw AppError.notFound('Module not found');
+  const outline = await getOutline(String(enrollment.courseId));
+  const states = computeModuleStates(outline, enrollment);
+  const index = states.findIndex((s) => s.id === moduleId);
+  if (index === -1) throw AppError.notFound('Module not found');
+  return { outline, states, state: states[index], module: outline.modules[index], index };
+};
+
+// Module ki progress entry nahi hai to banao. Filter mein `$ne` hai - do
+// parallel requests dono entry nahi bana sakti (single-document update atomic).
+export const ensureProgressEntry = async (enrollmentId: Types.ObjectId, moduleId: Types.ObjectId) => {
+  await Enrollment.updateOne(
+    { _id: enrollmentId, 'progress.moduleId': { $ne: moduleId } },
+    { $push: { progress: { moduleId, completedLessonIds: [], quizPassed: false, bestQuizScorePercent: 0 } } }
+  );
+};
+
+// Progress update ke BAAD call karo: module abhi complete hua? To
+// completedAt set (sirf pehli baar - arrayFilters condition) aur batao
+// agla module khula ya nahi. Lesson complete aur quiz pass dono yahi use karte hai.
+export const settleModuleCompletion = async (
+  outline: Outline,
+  before: IEnrollment,
+  after: IEnrollment,
+  moduleId: string
+) => {
+  const beforeStates = computeModuleStates(outline, before);
+  const afterStates = computeModuleStates(outline, after);
+  const index = afterStates.findIndex((s) => s.id === moduleId);
+  const moduleCompleted = afterStates[index].completed;
+  const justCompleted = moduleCompleted && !beforeStates[index].completed;
+
+  if (justCompleted) {
+    await Enrollment.updateOne(
+      { _id: after._id },
+      { $set: { 'progress.$[p].completedAt': new Date() } },
+      { arrayFilters: [{ 'p.moduleId': new Types.ObjectId(moduleId), 'p.completedAt': { $exists: false } }] }
+    );
+  }
+
+  const next = afterStates[index + 1];
+  return {
+    moduleCompleted,
+    nextModuleUnlocked: justCompleted && next ? { id: next.id, title: next.title } : null,
+    percentComplete: percentComplete(afterStates),
+  };
 };
 
 // ---- public functions ----
@@ -223,44 +273,18 @@ export const completeLesson = async (enrollmentId: string, userId: string, lesso
   assertModuleAccessible(enrollment, await loadCohort(enrollment.cohortId), state);
 
   const moduleObjectId = new Types.ObjectId(lesson.moduleId);
-  const lessonObjectId = new Types.ObjectId(lesson.id);
 
-  // Step 1: is module ki progress entry nahi hai to banao. Filter mein
-  // `$ne` hai - do parallel requests dono entry nahi bana sakti (MongoDB
-  // single-document update atomic hota hai).
-  await Enrollment.updateOne(
-    { _id: enrollment._id, 'progress.moduleId': { $ne: moduleObjectId } },
-    { $push: { progress: { moduleId: moduleObjectId, completedLessonIds: [], quizPassed: false, bestQuizScorePercent: 0 } } }
-  );
+  // Step 1: progress entry (atomic, duplicate-safe)
+  await ensureProgressEntry(enrollment._id as Types.ObjectId, moduleObjectId);
 
   // Step 2: lesson add - $addToSet, do baar mark karo to bhi ek hi baar
   const updated = await Enrollment.findOneAndUpdate(
     { _id: enrollment._id, 'progress.moduleId': moduleObjectId },
-    { $addToSet: { 'progress.$.completedLessonIds': lessonObjectId } },
+    { $addToSet: { 'progress.$.completedLessonIds': new Types.ObjectId(lesson.id) } },
     { new: true }
   );
   if (!updated) throw AppError.notFound('Enrollment not found');
 
-  // Step 3: module ab complete hua? To completedAt set karo (sirf pehli baar)
-  const beforeStates = computeModuleStates(outline, enrollment);
-  const afterStates = computeModuleStates(outline, updated);
-  const moduleIndex = afterStates.findIndex((s) => s.id === lesson.moduleId);
-  const moduleCompleted = afterStates[moduleIndex].completed;
-  const justCompleted = moduleCompleted && !beforeStates[moduleIndex].completed;
-
-  if (justCompleted) {
-    await Enrollment.updateOne(
-      { _id: enrollment._id },
-      { $set: { 'progress.$[p].completedAt': new Date() } },
-      { arrayFilters: [{ 'p.moduleId': moduleObjectId, 'p.completedAt': { $exists: false } }] }
-    );
-  }
-
-  const next = afterStates[moduleIndex + 1];
-  return {
-    lessonId: lesson.id,
-    moduleCompleted,
-    nextModuleUnlocked: justCompleted && next ? { id: next.id, title: next.title } : null,
-    percentComplete: percentComplete(afterStates),
-  };
+  // Step 3: module ab complete hua? (sirf pehli baar completedAt)
+  return { lessonId: lesson.id, ...(await settleModuleCompletion(outline, enrollment, updated, lesson.moduleId)) };
 };

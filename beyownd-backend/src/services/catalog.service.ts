@@ -20,6 +20,7 @@ import Course, { ICourse } from '../models/course.model';
 import Module from '../models/module.model';
 import Lesson from '../models/lesson.model';
 import Cohort, { ICohort } from '../models/cohort.model';
+import Quiz from '../models/quiz.model';
 import { AppError } from '../utils/AppError';
 import { getOrSet, invalidate, cacheKeys } from '../utils/cache';
 
@@ -45,8 +46,7 @@ export interface OutlineModule {
   description: string | null;
   order: number;
   isFreePreview: boolean;
-  // Phase 2 quizzes collection se bharega. Tab tak false → module
-  // lessons complete hote hi complete.
+  // true → module tabhi complete jab lessons done + quiz pass
   hasQuiz: boolean;
   lessons: OutlineLesson[];
 }
@@ -160,14 +160,17 @@ export const listPublishedCourses = (): Promise<CourseCard[]> =>
 
 export const getOutline = (courseId: string): Promise<Outline> =>
   getOrSet(cacheKeys.outline(courseId), CATALOG_TTL, async () => {
-    // Do queries poore course ke liye - modules + saare lessons (sirf
-    // title wagaira, `content` NAHI - woh bada hai, alag load hota hai)
-    const [modules, lessons] = await Promise.all([
+    // Teen queries poore course ke liye - modules, saare lessons (sirf
+    // title wagaira, `content` NAHI - woh bada hai, alag load hota hai), aur
+    // kin modules mein quiz hai (sirf moduleId)
+    const [modules, lessons, quizzes] = await Promise.all([
       Module.find({ courseId }).sort({ order: 1 }),
       Lesson.find({ courseId })
         .sort({ moduleId: 1, order: 1 })
         .select({ moduleId: 1, title: 1, order: 1, type: 1, estimatedMinutes: 1 }),
+      Quiz.find({ courseId }).select({ moduleId: 1 }),
     ]);
+    const modulesWithQuiz = new Set(quizzes.map((q) => String(q.moduleId)));
 
     const outlineModules: OutlineModule[] = modules.map((m) => ({
       id: String(m._id),
@@ -175,7 +178,7 @@ export const getOutline = (courseId: string): Promise<Outline> =>
       description: m.description ?? null,
       order: m.order,
       isFreePreview: m.isFreePreview,
-      hasQuiz: false,
+      hasQuiz: modulesWithQuiz.has(String(m._id)),
       lessons: lessons
         .filter((l) => String(l.moduleId) === String(m._id))
         .map((l) => ({
@@ -255,12 +258,18 @@ export const getPreviewLesson = async (slug: string, lessonId: string): Promise<
 };
 
 // Admin panel (Phase 5) content edit ke baad call karega
-export const invalidateCourseCache = async (course: { id: string; slug: string }, lessonIds: string[] = []) => {
+// (quiz edit pe quizModuleIds bhi do - quiz cache + outline ka hasQuiz dono)
+export const invalidateCourseCache = async (
+  course: { id: string; slug: string },
+  lessonIds: string[] = [],
+  quizModuleIds: string[] = []
+) => {
   await invalidate(
     cacheKeys.publishedCourses(),
     cacheKeys.courseBySlug(course.slug),
     cacheKeys.outline(course.id),
     cacheKeys.courseCohorts(course.id),
-    ...lessonIds.map((id) => cacheKeys.lesson(id))
+    ...lessonIds.map((id) => cacheKeys.lesson(id)),
+    ...quizModuleIds.map((id) => cacheKeys.quiz(id))
   );
 };

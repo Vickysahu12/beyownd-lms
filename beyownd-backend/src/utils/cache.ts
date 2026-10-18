@@ -58,4 +58,6 @@ export const cacheKeys = {
   outline: (courseId: string) => `cache:outline:${courseId}`,
   courseCohorts: (courseId: string) => `cache:course:${courseId}:cohorts`,
   lesson: (lessonId: string) => `cache:lesson:${lessonId}`,
+  // Answers ke saath - sirf server-side, kabhi client ko as-is nahi
+  quiz: (moduleId: string) => `cache:quiz:${moduleId}`,
 };
