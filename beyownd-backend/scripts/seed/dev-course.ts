@@ -7,6 +7,7 @@
 // Kya banata hai:
 //   Course "Full Stack Web Development" (published, slug: full-stack-web-dev)
 //   3 modules (module 1 = free preview), 7 lessons (ek YouTube video lesson)
+//   Quiz module 1 aur 2 ke end mein (3 questions each, pass 60%)
 //   1 batch FSWD-DEV (already started, ₹599, enrollment open)
 //
 // IDEMPOTENT: dobara chalao to duplicate nahi banta - har cheez apni natural
@@ -31,6 +32,7 @@ import Module from '../../src/models/module.model';
 import Lesson from '../../src/models/lesson.model';
 import Cohort from '../../src/models/cohort.model';
 import Enrollment from '../../src/models/enrollment.model';
+import Quiz from '../../src/models/quiz.model';
 import User from '../../src/models/user.model';
 import { invalidateCourseCache } from '../../src/services/catalog.service';
 
@@ -69,6 +71,20 @@ const CONTENT = [
   },
 ];
 
+// Module order → quiz questions (module 3 has no quiz - project comes after it)
+const QUIZZES: Record<number, { prompt: string; type?: 'single' | 'multiple'; options: string[]; correctOptionIndexes: number[]; explanation: string }[]> = {
+  1: [
+    { prompt: 'What does the browser send to a server to load a page?', options: ['An HTTP request', 'A CSS file', 'An email'], correctOptionIndexes: [0], explanation: 'The browser sends an HTTP request; the server replies with a response.' },
+    { prompt: 'Which language describes the *structure* of a page?', options: ['CSS', 'HTML', 'JavaScript'], correctOptionIndexes: [1], explanation: 'HTML is structure, CSS is style, JavaScript is behaviour.' },
+    { prompt: 'Which of these are CSS properties? (select all)', type: 'multiple', options: ['color', 'href', 'margin', 'onclick'], correctOptionIndexes: [0, 2], explanation: '`href` is an HTML attribute and `onclick` is an event attribute.' },
+  ],
+  2: [
+    { prompt: 'Which keyword declares a variable that cannot be reassigned?', options: ['let', 'var', 'const'], correctOptionIndexes: [2], explanation: '`const` bindings cannot be reassigned.' },
+    { prompt: 'What does `greet("Ravi")` return for `function greet(n) { return `Hello ${n}` }`?', options: ['"Hello n"', '"Hello Ravi"', 'undefined'], correctOptionIndexes: [1], explanation: 'Template literals insert the value of `n`.' },
+    { prompt: 'Which are JavaScript primitive types? (select all)', type: 'multiple', options: ['string', 'array', 'boolean', 'object'], correctOptionIndexes: [0, 2], explanation: 'Arrays and objects are not primitives.' },
+  ],
+};
+
 export const seedDevCourse = async (enrollEmail?: string) => {
   const admin = await User.findOne({ role: 'admin' }).select({ _id: 1 });
 
@@ -101,12 +117,22 @@ export const seedDevCourse = async (enrollEmail?: string) => {
   );
 
   const lessonIds: string[] = [];
+  const quizModuleIds: string[] = [];
   for (const [i, m] of CONTENT.entries()) {
     const module = await Module.findOneAndUpdate(
       { courseId: course._id, order: i + 1 },
       { $set: { title: m.title, description: m.description, isFreePreview: m.isFreePreview } },
       { upsert: true, new: true, runValidators: true }
     );
+    const questions = QUIZZES[i + 1];
+    if (questions) {
+      await Quiz.findOneAndUpdate(
+        { moduleId: module._id },
+        { $set: { courseId: course._id, passPercent: 60, questions } },
+        { upsert: true, new: true, runValidators: true }
+      );
+      quizModuleIds.push(String(module._id));
+    }
     for (const [j, l] of m.lessons.entries()) {
       const lesson = await Lesson.findOneAndUpdate(
         { moduleId: module._id, order: j + 1 },
@@ -147,7 +173,7 @@ export const seedDevCourse = async (enrollEmail?: string) => {
   );
 
   // Pehle se cached purana data na dikhe
-  await invalidateCourseCache({ id: String(course._id), slug: SLUG }, lessonIds);
+  await invalidateCourseCache({ id: String(course._id), slug: SLUG }, lessonIds, quizModuleIds);
 
   let enrolled: string | null = null;
   if (enrollEmail) {
@@ -161,7 +187,7 @@ export const seedDevCourse = async (enrollEmail?: string) => {
     enrolled = user.email;
   }
 
-  return { courseId: String(course._id), cohortId: String(cohort._id), lessons: lessonIds.length, enrolled };
+  return { courseId: String(course._id), cohortId: String(cohort._id), lessons: lessonIds.length, quizzes: quizModuleIds.length, enrolled };
 };
 
 // CLI entry - sirf tab chalta hai jab file seedha run ho (test import pe nahi)

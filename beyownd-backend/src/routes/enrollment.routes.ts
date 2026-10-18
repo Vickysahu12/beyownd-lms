@@ -6,6 +6,8 @@
 import { Router } from 'express';
 import * as enrollmentController from '../controllers/enrollment.controller';
 import { protect } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { quizAttemptValidator, projectSubmissionValidator } from '../validators/learning.validator';
 
 const router = Router();
 
@@ -15,5 +17,14 @@ router.get('/', enrollmentController.listMine);
 router.get('/:id', enrollmentController.getDashboard);
 router.get('/:id/lessons/:lessonId', enrollmentController.getLesson);
 router.post('/:id/lessons/:lessonId/complete', enrollmentController.completeLesson);
+
+// Quiz - module ke end mein (cooldown + grading service mein)
+router.get('/:id/modules/:moduleId/quiz', enrollmentController.getQuiz);
+router.post('/:id/modules/:moduleId/quiz/attempts', quizAttemptValidator, validate, enrollmentController.submitQuizAttempt);
+router.get('/:id/modules/:moduleId/quiz/attempts', enrollmentController.listQuizAttempts);
+
+// Final project
+router.get('/:id/project', enrollmentController.getProject);
+router.post('/:id/project/submissions', projectSubmissionValidator, validate, enrollmentController.submitProject);
 
 export default router;

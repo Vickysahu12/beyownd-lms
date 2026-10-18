@@ -22,12 +22,13 @@ interface NormalizedError {
   statusCode: number;
   message: string;
   code: string;
+  details?: Record<string, unknown>;
 }
 
 // Library-specific errors ko humare standard shape mein badalta hai.
 const normalize = (err: any): NormalizedError | null => {
   if (err instanceof AppError) {
-    return { statusCode: err.statusCode, message: err.message, code: err.code };
+    return { statusCode: err.statusCode, message: err.message, code: err.code, details: err.details };
   }
   if (err instanceof mongoose.Error.ValidationError) {
     const message = Object.values(err.errors).map((e) => e.message).join(', ');
@@ -63,10 +64,14 @@ export const errorHandler = (err: any, req: Request, res: Response, _next: NextF
   if (known) {
     // Expected error - warn level, stack trace ki zaroorat nahi
     log.warn({ code: known.code, statusCode: known.statusCode }, known.message);
+    // Standard header bhi - clients/proxies "kab retry karein" samajh sakein
+    const retryAfter = known.details?.retryAfterSeconds;
+    if (typeof retryAfter === 'number') res.setHeader('Retry-After', String(retryAfter));
     return res.status(known.statusCode).json({
       success: false,
       message: known.message,
       code: known.code,
+      ...(known.details ? { details: known.details } : {}),
     });
   }
 

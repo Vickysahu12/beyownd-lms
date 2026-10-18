@@ -2,7 +2,10 @@
 // Thin layer - ownership + access rules sab enrollment.service mein.
 
 import { Request, Response } from 'express';
+import { matchedData } from 'express-validator';
 import * as enrollmentService from '../services/enrollment.service';
+import * as quizService from '../services/quiz.service';
+import * as projectService from '../services/project.service';
 
 type LessonParams = { id: string; lessonId: string };
 
@@ -24,4 +27,37 @@ export const getLesson = async (req: Request<LessonParams>, res: Response) => {
 export const completeLesson = async (req: Request<LessonParams>, res: Response) => {
   const result = await enrollmentService.completeLesson(req.params.id, req.user!.id, req.params.lessonId);
   res.status(200).json({ success: true, ...result });
+};
+
+// ---- Quiz (Phase 2) ----
+
+type ModuleParams = { id: string; moduleId: string };
+
+export const getQuiz = async (req: Request<ModuleParams>, res: Response) => {
+  const quiz = await quizService.getQuiz(req.params.id, req.user!.id, req.params.moduleId);
+  res.status(200).json({ success: true, quiz });
+};
+
+export const submitQuizAttempt = async (req: Request<ModuleParams>, res: Response) => {
+  const { answers } = matchedData(req, { locations: ['body'] }) as { answers: quizService.AnswerInput[] };
+  const result = await quizService.submitAttempt(req.params.id, req.user!.id, req.params.moduleId, answers);
+  res.status(200).json({ success: true, ...result });
+};
+
+export const listQuizAttempts = async (req: Request<ModuleParams>, res: Response) => {
+  const attempts = await quizService.listAttempts(req.params.id, req.user!.id, req.params.moduleId);
+  res.status(200).json({ success: true, attempts });
+};
+
+// ---- Project (Phase 2) ----
+
+export const getProject = async (req: Request<{ id: string }>, res: Response) => {
+  const project = await projectService.getProject(req.params.id, req.user!.id);
+  res.status(200).json({ success: true, ...project });
+};
+
+export const submitProject = async (req: Request<{ id: string }>, res: Response) => {
+  const input = matchedData(req, { locations: ['body'] }) as projectService.SubmissionInput;
+  const result = await projectService.submitProject(req.params.id, req.user!.id, input);
+  res.status(201).json({ success: true, ...result });
 };
