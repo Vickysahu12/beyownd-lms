@@ -245,7 +245,7 @@ Offer letters, certificates and completion letters — the product the business 
 | `credentialId` | string | **public** ID, unique, e.g. `BYD-26-7KQ4-M9XA` (random, not guessable, no confusable characters like 0/O) — printed on the PDF and in the QR code |
 | `type` | enum | `offer_letter` · `completion_certificate` · `completion_letter` |
 | `userId`, `enrollmentId`, `courseId`, `cohortId` | ObjectId | |
-| `snapshot` | embedded | `{ studentName, collegeName, courseTitle, skills, cohortCode, startDate, endDate, issuedAt }` — copied at issue time, **never edited** |
+| `snapshot` | embedded | `{ studentName, collegeName, courseTitle, skills, cohortName, cohortCode, startDate, endDate, durationWeeks, issuedAt, issuer: { legalName, registrationNo, address, email, signatoryName, signatoryTitle, brand, programName } }` — copied at issue time, **never edited** |
 | `pdfKey` | string? | object key in Cloudflare R2; set by the worker when the PDF is ready |
 | `status` | enum | `generating` · `issued` · `revoked` |
 | `revokedAt`, `revokedReason`, `revokedBy` | ? | only revocation can change a credential |

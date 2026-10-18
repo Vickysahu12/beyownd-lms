@@ -1,7 +1,7 @@
 # Phase 3 — Payments & Credentials
 
 **Dates:** Oct 18 – , 2026
-**Status:** 🟡 In progress — Part A (payments) ✅ done; Part B (credentials) and Part C (mentor review) next
+**Status:** 🟡 In progress — Part A (payments) ✅ · Part B (credentials) ✅ · Part C (mentor review + completion) next
 **Interview doc:** [../interview/phase-3-payments-credentials.md](../interview/phase-3-payments-credentials.md)
 **Design followed:** [schemas.md](../design/schemas.md) §5–6 · [api-routes.md](../design/api-routes.md) §6–9 · decisions D2, D5, D7
 
@@ -12,7 +12,7 @@ Money in, trustworthy documents out: a student pays with Razorpay and is enrolle
 | Part | Scope | Status |
 | --- | --- | --- |
 | A | Checkout, signature verification, webhooks, idempotent activation, seat race, refunds | ✅ Oct 18 |
-| B | Credential model, PDF worker (BullMQ), offer letter on payment, verify endpoint, my documents | ⏳ |
+| B | Credential model, PDF worker (BullMQ), offer letter on payment, verify endpoint, my documents | ✅ Oct 18 |
 | C | Mentor review queue + decision, course completion, certificate after batch end | ⏳ |
 
 ---
@@ -97,3 +97,73 @@ Commit all three, or none.
 **Result (Oct 18):** 19 / 19 passing. **Full suite: 114 / 114 passing** (~68 s).
 
 Dev-environment fix found on the way: MongoDB refused to start the test replica set because the system drive (C:) had < 500 MB free; ~400 MB of it was leftover data from earlier interrupted test runs (removed). Test database files now live in `beyownd-backend/.tmp/mongo-tests/` on the project drive (gitignored) and are deleted after every run (verified: 0 leftovers).
+
+---
+
+## Part B — Credentials (documents + verify)
+
+### What was built
+
+| Area | Files | What it does |
+| --- | --- | --- |
+| Issuer config | [config/issuer.ts](../../beyownd-backend/src/config/issuer.ts) | GrewDo legal details from `.env` (placeholders until real ones arrive), program name, verify URL, optional logo/signature PNGs in `assets/branding/` |
+| Model | [models/credential.model.ts](../../beyownd-backend/src/models/credential.model.ts) | Public `credentialId`, type, snapshot (incl. issuer), status, revocation. **Immutable by code**: hooks block any update to snapshot/type/IDs |
+| IDs | [utils/credentialId.util.ts](../../beyownd-backend/src/utils/credentialId.util.ts) | `BYD-26-7KQ4-M9XA` — crypto-random, 31-char alphabet without 0/O/1/I/L (~850 billion combinations); input normalized (case, spaces) |
+| PDFs | [services/document.service.ts](../../beyownd-backend/src/services/document.service.ts) | pdf-lib templates: offer letter, completion letter (A4 portrait), certificate (A4 landscape). GrewDo letterhead, "Beyownd is a product of GrewDo", QR → verify URL |
+| Storage | [utils/storage.util.ts](../../beyownd-backend/src/utils/storage.util.ts) | Local folder in dev; signed 5-minute download URLs (HMAC); key pattern blocks path traversal. One file to swap for R2 |
+| Queue | [jobs/queue.ts](../../beyownd-backend/src/jobs/queue.ts) | BullMQ `documents` queue: 5 attempts, exponential backoff, `jobId` = credential (no duplicate jobs) |
+| Worker | [jobs/document.processor.ts](../../beyownd-backend/src/jobs/document.processor.ts), [worker.ts](../../beyownd-backend/src/worker.ts) | Separate process (`npm run worker`): render → store → mark issued → email job. Idempotent. Re-queues stuck `generating` documents on startup |
+| Logic | [services/credential.service.ts](../../beyownd-backend/src/services/credential.service.ts) | Issue (idempotent, locks certificate name), revoke, my documents, download link, public verify (cached) |
+| Wiring | [payment.service.ts](../../beyownd-backend/src/services/payment.service.ts) | Activation → offer letter (after commit; never fails the payment). Refund → all documents of the enrollment revoked |
+| Routes | [routes/credential.routes.ts](../../beyownd-backend/src/routes/credential.routes.ts) | `GET /credentials`, `GET /credentials/:id/download`, `GET /verify/:id` (public), `GET /files/:folder/:file` (signed) |
+
+### Flow
+
+```text
+payment activated ──► issueCredential(enrollment, 'offer_letter')
+                        snapshot { name, college, course, batch dates, issuer=GrewDo }
+                        status: generating · certificate name locked · job queued
+                                   │
+                    worker (separate process, BullMQ)
+                        render PDF (pdf-lib) → store → status: issued → email job
+                                   │
+student: GET /credentials/:id/download → 5-min signed link → PDF
+anyone:  GET /verify/BYD-26-XXXX-XXXX  → name, college, course, dates, issuer, status
+refund ──► all documents of the enrollment: revoked (verify shows "revoked")
+```
+
+### Guarantees
+
+| Guarantee | How |
+| --- | --- |
+| One document per enrollment per type | Unique `{ enrollmentId, type }`; `issueCredential` returns the existing one; 3 parallel calls tested |
+| Documents never change after issue | Mongoose hooks reject updates/saves touching snapshot, type or IDs (tested); issuer stored in the snapshot, so a future issuer change doesn't rewrite history |
+| A revoked document never comes back | Worker only moves `generating → issued`; revoked is final (tested) |
+| Payment never fails because of a PDF | Offer letter is issued after the transaction commits, inside try/catch; worker retries with backoff; startup recovery re-queues stuck ones |
+| Shared links die | Download URLs are HMAC-signed and expire in 5 minutes (tampered / expired → 403, tested) |
+| Privacy | Verify returns only name, college, course, dates, issuer and status — never email, phone or internal IDs (tested) |
+| PDF can't crash on unusual text | Certificate name must be English letters (fonts are Latin-only; colleges want English names); every other string goes through `pdfSafe()` (tested with Devanagari) |
+
+### Bugs found while building
+
+| Bug | Fix |
+| --- | --- |
+| Jest never exited after tests: BullMQ doesn't close a Redis connection you pass in when the queue closes | Keep a reference and `quit()` it in `closeQueues()`; same for the worker's connection; API shutdown now closes the queue too |
+| A very long college name would overflow the certificate border | Centered certificate lines shrink their font until they fit (min 8 pt) |
+| `dotenv` v17 prints a banner on every start (looked like an error in test output) | `dotenv.config({ quiet: true })` |
+
+### Running it locally
+
+```bash
+docker start beyownd-redis
+npm run dev       # terminal 1 - API
+npm run worker    # terminal 2 - PDF + email worker
+```
+
+Documents are written to `beyownd-backend/.tmp/documents/` (gitignored). Put `logo.png` and `signature.png` in `beyownd-backend/assets/branding/` and set the `ISSUER_*` values in `.env` when the real GrewDo details are ready.
+
+### Tests
+
+[tests/credentials.test.ts](../../beyownd-backend/tests/credentials.test.ts) — 15 tests (4 pure + 4 issuing + 3 download + 3 verify + 1 refund). **Full suite: 129 / 129 passing**, Jest exits cleanly, no leftover test data.
+
+Worker process smoke test: starts, connects to Redis; MongoDB Atlas refused because the dev machine's mobile IP changed (fail-fast worked as designed — add the new IP in Atlas → Network Access).

@@ -18,7 +18,7 @@ You are building the Beyownd frontend: first the marketing landing page (`beyown
 
 | File | Why |
 | --- | --- |
-| [../business-model.md](../business-model.md) | What we sell and why credentials must be earned — this shapes every piece of copy |
+| [../business-model.md](../business-model.md) | What we sell, why credentials must be earned, and §7 **GrewDo (legal entity) vs Beyownd (brand)** — this shapes every piece of copy |
 | [../design/user-flow.md](../design/user-flow.md) | Domains, login methods, onboarding questions and fields |
 | [../design/api-routes.md](../design/api-routes.md) | Every endpoint, response shape and error code — build the app against this |
 | [../design/schemas.md](../design/schemas.md) §9 | Product decisions D1–D10 (e.g. certificates issue after the batch end date) |
@@ -27,7 +27,7 @@ You are building the Beyownd frontend: first the marketing landing page (`beyown
 
 ## 3. Who we're designing for
 
-**Beyownd** runs paid, project-based **virtual internship programs** (₹599–799) for **final-year students at tier 3 and tier 4 colleges in India**, who need an internship certificate and letter for their degree but rarely have access to real internships.
+**Beyownd** (a product of **GrewDo**, the owner's startup studio and legal entity) runs paid, project-based **virtual internship programs** (₹599–799) for **final-year students at tier 3 and tier 4 colleges in India**, who need an internship certificate and letter for their degree but rarely have access to real internships.
 
 A student joins a batch with real dates, learns module by module, passes a quiz per module, builds a final project that a mentor reviews, and receives an offer letter, completion certificate and completion letter — each **publicly verifiable** at `/verify/<id>`.
 
@@ -142,6 +142,7 @@ Accordion, smooth height animation, one open at a time on mobile. Honest answers
 
 ### 5.11 Footer (ink or cream)
 - Required for Razorpay approval: **Terms & Conditions, Privacy Policy, Refund & Cancellation Policy, Contact Us**, registered business name and address (placeholders until the owner provides them).
+- **Legal entity = GrewDo** (the owner's startup studio); **Beyownd is a product of GrewDo**. The footer must say *"Beyownd is a product of GrewDo"* with GrewDo's legal name and registered address. In Terms, Privacy and Refund pages the legal party is **GrewDo**. Keep the Beyownd brand everywhere else. Full rules: [../business-model.md](../business-model.md) §7.
 - Links: Programs, Verify a certificate, FAQ, Login.
 
 ## 6. Motion and micro-interactions — the quality bar

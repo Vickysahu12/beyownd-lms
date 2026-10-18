@@ -37,7 +37,7 @@ This is also the strongest interview point: *"the business only works if the cre
 
 These have lead times outside our control. Verify current requirements yourself / with a CA — rules change.
 
-- [ ] **Business registration** — at least Udyam (MSME) registration; many colleges check that the internship provider is a registered entity. Consider LLP / Pvt Ltd later.
+- [ ] **Register GrewDo** (the legal entity — see §7) — at least Udyam (MSME); Pvt Ltd if it can be done in time. Many colleges check that the internship provider is a registered entity. **Launch blocker.**
 - [ ] **Razorpay account + KYC** — activation needs business details, bank account, and a live website with policy pages. Apply early.
 - [ ] **Policy pages** on the site: Terms & Conditions, Privacy Policy, Refund & Cancellation Policy, Contact Us.
 - [ ] **Domain + business email** (e.g. `hello@beyownd.in`) and verify the domain in Resend so OTP / certificate emails don't land in spam.
@@ -59,3 +59,22 @@ At 1000 paying students → ~₹6 – 8 lakh revenue per batch cycle. Infra cost
 ## 6. What changed from the original PRD
 
 The original PRD listed payments as a non-goal. With this model, **payments + internship documents move to Must Have** and leaderboard/streaks move down. See [roadmap.md](roadmap.md).
+
+## 7. Legal entity and branding (decided Oct 18, 2026)
+
+**GrewDo** is the owner's startup studio and the **legal entity**. **Beyownd** is one of its products (a brand, not a separate company). If Beyownd grows, it may later be registered as its own company.
+
+| Where | What it says |
+| --- | --- |
+| Offer letter / certificate / completion letter | Letterhead and issuer: **GrewDo** (legal name, registration no. — CIN or Udyam —, address, email). Program: **"Beyownd Virtual Internship Program"**. Signed by the GrewDo signatory. Footer line: *"Beyownd is a product of GrewDo."* + verify link `beyownd.in/verify/<id>` |
+| Website footer | "Beyownd is a product of GrewDo [legal suffix]" + registered address |
+| Terms, Privacy, Refund policy | Legal party: **GrewDo** |
+| Razorpay | Business (KYC) name: **GrewDo**; display/brand name at checkout: **Beyownd** |
+| Payment receipts / invoices | Issued by GrewDo |
+| Verify page | "Issued by GrewDo for the Beyownd Virtual Internship Program" |
+
+**Why both names, not GrewDo alone:** the student and the TPO meet *Beyownd* (website, verify link). A letter that only says "GrewDo" next to a `beyownd.in` link creates doubt. Showing the relationship explicitly removes it.
+
+**In the code:** the issuer's details are configuration, and **every credential stores a snapshot of the issuer at issue time**. If the issuer changes later (e.g. Beyownd becomes its own company), new documents use the new name while old ones keep showing GrewDo — which is what actually happened, so verification stays truthful.
+
+**Blocking for launch:** GrewDo must be registered before taking payments or issuing letters (Razorpay KYC and college trust both depend on it). Confirm the fastest correct route (e.g. Pvt Ltd vs. starting with a proprietorship / Udyam) with a CA.

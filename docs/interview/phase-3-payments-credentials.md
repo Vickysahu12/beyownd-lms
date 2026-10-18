@@ -1,6 +1,6 @@
 # Interview — Phase 3: Payments & Credentials
 
-**Status:** 🟡 Part A (payments) built and tested (19 tests, 114 total). Credentials (Part B) and mentor review (Part C) not built yet — don't claim them.
+**Status:** 🟡 Parts A (payments, 19 tests) and B (credentials, 15 tests) built and tested — 129 total. Mentor review and course completion (Part C) not built yet — don't claim them.
 
 ## One-line summary (Part A)
 
@@ -54,3 +54,28 @@ A: Razorpay test keys in dev. In automated tests, only the "create order" networ
 
 **Q: Can a user activate an enrollment by replaying someone else's payment signature?**
 A: The verify lookup is by order ID *and* the logged-in user, and the signature binds the order to the payment. Replaying it for another order fails the HMAC; replaying it for the same order is idempotent.
+
+## Part B — Credentials (built and tested: 15 tests)
+
+**One line:** every offer letter, certificate and completion letter is an immutable, publicly verifiable record with a random ID and QR code, generated as a PDF by a background worker.
+
+**Story — why a queue and a separate worker.** "Generating a PDF takes a second or two of CPU. Doing it inside the payment request would make students wait, and a burst of payments would slow the whole API. The API just records the credential and drops a job in a BullMQ queue; a separate worker process renders the PDF, stores it and emails the student. Jobs retry with exponential backoff, the job ID is the credential ID so it's never queued twice, and on startup the worker re-queues anything stuck in 'generating' — for example if Redis was down when the job was added."
+
+**Story — immutability enforced in code.** "A certificate that can be quietly edited isn't worth anything. Each credential stores a snapshot — name, college, course, batch dates and the issuing company — at issue time, and Mongoose hooks reject any update that touches those fields. Only status, the PDF key and revocation fields can change. Because the issuer is in the snapshot, if the product later moves to a new legal entity, old certificates still truthfully say who issued them."
+
+**Story — the verify page.** "A college can type or scan the ID and see the name, program, dates, issuer and status — never email or phone. A revoked certificate still verifies, but shows 'revoked' with the date, so it can't be passed off as genuine. Results are cached in Redis and invalidated the moment a status changes."
+
+**Story — a library limitation turned into a product rule.** "pdf-lib's built-in fonts only cover Latin characters, so a Devanagari name would crash rendering. Colleges want English names on certificates anyway, so the certificate-name field accepts English letters only, and every other string passes through a sanitizer, so no input can crash a PDF. Embedding a Unicode font is the upgrade path."
+
+**Story — a test that wouldn't exit.** "All tests passed but Jest hung. BullMQ doesn't close a Redis connection you hand it, because it assumes it's shared. I keep a reference and quit it explicitly — in tests, on API shutdown and in the worker."
+
+**Decisions & trade-offs**
+- **pdf-lib over Puppeteer:** no headless Chrome on a small VPS (memory, disk, cold starts); the cost is layout in code instead of HTML/CSS.
+- **Signed, expiring download URLs** instead of public file links — a shared link dies in 5 minutes. With Cloudflare R2 this becomes a presigned URL; only the storage module changes.
+- **Readable random IDs** (`BYD-26-7KQ4-M9XA`): 8 random characters from a 31-character alphabet with no 0/O/1/I/L — unguessable and easy to type from paper.
+- **Offer letter after the transaction**, never inside it — a PDF problem must never undo a payment.
+
+**Likely questions**
+- *What if the worker is down?* Payments and enrollment still work; documents wait in the queue (or in 'generating') and are processed when the worker comes back.
+- *Can someone enumerate certificates?* ~850 billion possible IDs per year prefix, the verify endpoint is rate-limited, and it returns no contact details.
+- *How do you revoke?* Refunds revoke automatically; an admin revoke endpoint comes with the admin panel. Revocation invalidates the verify cache immediately.

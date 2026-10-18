@@ -94,13 +94,14 @@ Both `/payments/verify` and the webhook run the same idempotent activation (see 
 
 **Implementation note:** the webhook signature is computed over the **raw request body**, so `/webhooks/razorpay` is mounted with `express.raw()` *before* the global `express.json()` in `app.ts`. It is excluded from CORS and rate limiting, and always answers 200 quickly (heavy work goes to the queue) so Razorpay doesn't retry needlessly.
 
-## 8. Credentials & public verification (Phase 3)
+## 8. Credentials & public verification ✅ (Phase 3B)
 
 | Method | Path | Access | Purpose · key error codes |
 | --- | --- | --- | --- |
 | GET | `/credentials` | auth | My documents: type, course, status (`generating` / `issued` / `revoked`), credentialId |
-| GET | `/credentials/:credentialId/download` | auth (owner) | Redirects to a short-lived (5 min) signed R2 URL for the PDF · `NOT_FOUND` |
-| GET | `/verify/:credentialId` | **public** | What a college or recruiter sees: `{ valid, status, type, studentName, collegeName, courseTitle, skills, cohort dates, issuedAt, revokedAt? }`. Never returns email or phone. Cached; rate-limited per IP |
+| GET | `/credentials/:credentialId/download` | auth (owner) | `{ url, expiresAt }` — a signed link valid for 5 minutes (open it to download the PDF) · `CREDENTIAL_NOT_FOUND`, `CREDENTIAL_NOT_READY` (still generating), `CREDENTIAL_REVOKED` |
+| GET | `/files/:folder/:file?expires=&sig=` | signed link | The PDF itself (`Content-Disposition: attachment`) · `DOWNLOAD_LINK_EXPIRED` |
+| GET | `/verify/:credentialId` | **public** | `{ credential: { valid, status (issued \| generating \| revoked), credentialId, type, label, studentName, collegeName, courseTitle, skills, cohortName, startDate, endDate, issuedAt, issuedBy (GrewDo), programName, revokedAt } }`. Case/space-insensitive ID. Never returns email or phone. Cached; rate-limited per IP · `CREDENTIAL_NOT_FOUND` |
 
 Revoked credentials still verify — they show **status: revoked** with the date, so a revoked certificate can't be passed off as genuine.
 
