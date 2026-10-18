@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360">
+<defs>
+  <linearGradient id="vol" x1="0" y1="109.1" x2="0" y2="302.4" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#f7fbfe"/>
+    <stop offset="0.8" stop-color="#d6eaf7"/><stop offset="1" stop-color="#b6d6ee"/>
+  </linearGradient>
+  <linearGradient id="warm" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0.35" stop-color="#ffd9a0" stop-opacity="0"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0.75"/>
+  </linearGradient>
+  <radialGradient id="hl"><stop offset="0" stop-color="#fff" stop-opacity="0.85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <filter id="paint" x="-8%" y="-15%" width="116%" height="130%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0089" numOctaves="3" seed="27" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G" result="d"/>
+    <feGaussianBlur in="d" stdDeviation="4.3"/>
+  </filter>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="30"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 0.62  0 0 0 0 0.76  0 0 0 0 0.9  0 0 0 0.12 0"/>
+  </filter>
+  <mask id="shape" maskUnits="userSpaceOnUse" x="0" y="0" width="760" height="360"><g fill="#fff" filter="url(#paint)"><circle cx="83.6" cy="261.9" r="47.5"/><circle cx="131.6" cy="263.3" r="44.9"/><circle cx="197" cy="259.1" r="52.5"/><circle cx="255.9" cy="259.1" r="52.5"/><circle cx="318.2" cy="260.8" r="49.4"/><circle cx="373.3" cy="264.2" r="43.3"/><circle cx="442.9" cy="260.8" r="49.5"/><circle cx="506.8" cy="255.5" r="59.2"/><circle cx="565" cy="260.2" r="50.6"/><circle cx="630.1" cy="261.7" r="47.8"/><circle cx="692.1" cy="262.5" r="46.4"/><circle cx="100" cy="238.1" r="47.5"/><circle cx="149.4" cy="221.3" r="50.2"/><circle cx="220.6" cy="209.7" r="65.7"/><circle cx="263.8" cy="214.3" r="70.4"/><circle cx="312.1" cy="228.4" r="64.7"/><circle cx="386" cy="227.9" r="53"/><circle cx="433.4" cy="208.4" r="65.8"/><circle cx="484.8" cy="198.9" r="57"/><circle cx="528.5" cy="196.4" r="70.6"/><circle cx="607.9" cy="222.6" r="53.3"/><circle cx="652.9" cy="240.3" r="58"/><circle cx="95.6" cy="215.5" r="46"/><circle cx="170.7" cy="179.2" r="43"/><circle cx="270.4" cy="185.6" r="36.8"/><circle cx="354.7" cy="218.6" r="40"/><circle cx="414" cy="179.7" r="52.7"/><circle cx="485.9" cy="152.4" r="43.3"/><circle cx="566.7" cy="166.8" r="40.2"/><circle cx="664.7" cy="226.8" r="50.5"/></g></mask>
+</defs>
+<g mask="url(#shape)">
+  <rect width="760" height="360" fill="url(#vol)"/>
+  <g filter="url(#paint)" opacity="0.9"><circle cx="90.5" cy="226.2" r="33.2" fill="url(#hl)"/><circle cx="139.4" cy="208.8" r="35.1" fill="url(#hl)"/><circle cx="207.4" cy="193.2" r="46" fill="url(#hl)"/><circle cx="249.7" cy="196.7" r="49.3" fill="url(#hl)"/><circle cx="299.2" cy="212.2" r="45.3" fill="url(#hl)"/><circle cx="375.4" cy="214.7" r="37.1" fill="url(#hl)"/><circle cx="420.3" cy="192" r="46" fill="url(#hl)"/><circle cx="473.4" cy="184.7" r="39.9" fill="url(#hl)"/><circle cx="514.4" cy="178.8" r="49.4" fill="url(#hl)"/><circle cx="597.3" cy="209.3" r="37.3" fill="url(#hl)"/><circle cx="641.3" cy="225.8" r="40.6" fill="url(#hl)"/><circle cx="86.4" cy="204" r="32.2" fill="url(#hl)"/><circle cx="162.1" cy="168.4" r="30.1" fill="url(#hl)"/><circle cx="263" cy="176.4" r="25.8" fill="url(#hl)"/><circle cx="346.7" cy="208.6" r="28" fill="url(#hl)"/><circle cx="403.4" cy="166.5" r="36.9" fill="url(#hl)"/><circle cx="477.2" cy="141.5" r="30.3" fill="url(#hl)"/><circle cx="558.7" cy="156.7" r="28.2" fill="url(#hl)"/><circle cx="654.6" cy="214.2" r="35.3" fill="url(#hl)"/></g>
+  <rect width="760" height="360" fill="url(#warm)"/>
+  <rect width="760" height="360" filter="url(#grain)"/>
+</g>
+</svg>
