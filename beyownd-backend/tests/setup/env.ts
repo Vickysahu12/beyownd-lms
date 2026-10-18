@@ -19,3 +19,6 @@ process.env.RAZORPAY_WEBHOOK_SECRET = 'test-webhook-secret';
 // use it - tests/setup/db.ts connects to a per-file in-memory MongoDB.
 process.env.MONGO_URI = 'mongodb://127.0.0.1:1/unused';
 process.env.PORT = '0';
+// PDFs from tests go here (gitignored), never into the dev documents folder
+process.env.STORAGE_LOCAL_DIR = require('path').join(__dirname, '..', '..', '.tmp', 'documents-test');
+process.env.API_PUBLIC_URL = 'http://localhost:5000';

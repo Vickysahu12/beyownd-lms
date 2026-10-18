@@ -35,6 +35,7 @@ import { logger } from '../utils/logger';
 import { env } from '../config/env';
 import { invalidate, cacheKeys } from '../utils/cache';
 import { createOrder, isValidCheckoutSignature } from '../utils/razorpay.util';
+import { issueCredential, revokeForEnrollment } from './credential.service';
 
 export type ActivationOutcome = 'activated' | 'already_processed' | 'cohort_full_refund_required';
 
@@ -185,10 +186,21 @@ export const activatePayment = async (input: ActivationInput): Promise<Activatio
     const outcome = await session.withTransaction(() => runActivation(input, session));
     if (outcome !== 'already_processed') {
       // Seats badli - public "seats left" cache hatao
-      const payment = await Payment.findOne({ razorpayOrderId: input.razorpayOrderId }).select({ cohortId: 1 });
+      const payment = await Payment.findOne({ razorpayOrderId: input.razorpayOrderId }).select({ cohortId: 1, enrollmentId: 1 });
       const cohort = payment ? await Cohort.findById(payment.cohortId).select({ courseId: 1 }) : null;
       if (cohort) await invalidate(cacheKeys.courseCohorts(String(cohort.courseId)));
       logger.info({ orderId: input.razorpayOrderId, outcome }, 'Payment processed');
+
+      // Offer letter - transaction commit hone ke BAAD. Fail ho to payment
+      // fail nahi hota (paise aa chuke, enrollment active hai) - error log
+      // hota hai aur admin reissue kar sakta hai.
+      if (outcome === 'activated' && payment) {
+        try {
+          await issueCredential(payment.enrollmentId, 'offer_letter');
+        } catch (err) {
+          logger.error({ err, enrollmentId: payment.enrollmentId }, 'Offer letter issue failed after activation');
+        }
+      }
     }
     return outcome;
   } finally {
@@ -280,18 +292,21 @@ export const handleWebhookEvent = async (event: RazorpayWebhookEvent, eventId?: 
   }
 };
 
-// Refund: payment refunded, enrollment refunded, seat wapas. (Credentials
-// revoke Part B mein yahin judega.) Transaction - teeno saath.
+// Refund: payment refunded, enrollment refunded, seat wapas (transaction -
+// teeno saath). Commit ke baad us enrollment ke saare documents REVOKE -
+// refund ke baad certificate/offer letter valid nahi rehna chahiye.
 export const markRefunded = async (razorpayPaymentId: string) => {
   const session = await mongoose.startSession();
+  let enrollmentId: unknown = null;
   try {
-    return await session.withTransaction(async () => {
+    const result = await session.withTransaction(async () => {
       const payment = await Payment.findOneAndUpdate(
         { razorpayPaymentId, status: 'paid' },
         { $set: { status: 'refunded', refundedAt: new Date(), refundRequired: false } },
         { new: true, session }
       );
       if (!payment) return 'already_processed';
+      enrollmentId = payment.enrollmentId;
 
       const enrollment = await Enrollment.findOneAndUpdate(
         { _id: payment.enrollmentId, status: { $in: ['active', 'completed'] } },
@@ -308,6 +323,10 @@ export const markRefunded = async (razorpayPaymentId: string) => {
       }
       return 'refunded';
     });
+    if (result === 'refunded' && enrollmentId) {
+      await revokeForEnrollment(String(enrollmentId), 'Payment refunded');
+    }
+    return result;
   } finally {
     await session.endSession();
   }

@@ -20,6 +20,27 @@ const unique = () => `${Date.now().toString(36)}${(counter++).toString(36)}`;
 export const createStudent = async (role: 'student' | 'mentor' | 'admin' = 'student', { onboarded = false } = {}) => {
   const user = await User.create({
     onboardingCompleted: onboarded,
+    // Onboarded students get a real profile - credentials copy name + college from it
+    ...(onboarded
+      ? {
+          profile: {
+            certificateName: 'Ravi Kumar',
+            phone: '+919876543210',
+            collegeId: new Types.ObjectId(),
+            collegeName: 'Govt College of Engineering, Pune',
+            degree: 'btech',
+            branch: 'CSE',
+            currentYear: '4',
+            graduationYear: new Date().getFullYear() + 1,
+            city: 'Pune',
+            state: 'Maharashtra',
+            goal: 'internship_certificate',
+            interestedTracks: ['web_dev'],
+            skillLevel: 'basics',
+            heardFrom: 'instagram',
+          },
+        }
+      : {}),
     name: 'Test Student',
     email: `student-${unique()}@example.com`,
     password: 'Str0ng@Pass',

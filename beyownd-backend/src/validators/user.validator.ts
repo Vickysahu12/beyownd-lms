@@ -16,7 +16,7 @@
 import { body, query, ValidationChain } from 'express-validator';
 import {
   DEGREES, CURRENT_YEARS, GOALS, SKILL_LEVELS, HEARD_FROM, INTEREST_AREAS, INDIAN_STATES,
-  PERSON_NAME_PATTERN, MAX_INTERESTS,
+  CERTIFICATE_NAME_PATTERN, MAX_INTERESTS,
 } from '../constants/profile';
 
 type Mode = 'create' | 'update';
@@ -41,7 +41,7 @@ const profileRules = (mode: Mode): ValidationChain[] => {
       .isString().withMessage('Name on certificate is required').bail()
       .trim()
       .isLength({ min: 2, max: 60 }).withMessage('Name must be 2-60 characters').bail()
-      .matches(PERSON_NAME_PATTERN).withMessage("Name can only contain letters, spaces, . ' -"),
+      .matches(CERTIFICATE_NAME_PATTERN).withMessage("Enter your name in English letters, as it should appear on the certificate"),
 
     field('phone')
       .isString().withMessage('Phone number is required').bail()

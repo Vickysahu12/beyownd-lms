@@ -6,6 +6,7 @@ import path from 'path';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { redisClient } from '../../src/config/redis';
+import { closeQueues } from '../../src/jobs/queue';
 
 // Replica set (1 node), not a standalone server - payments use MongoDB
 // transactions, which only work on a replica set (Atlas always is one)
@@ -59,6 +60,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  await closeQueues();
   await mongoose.disconnect();
   await mongo?.stop({ doCleanup: true, force: true });
   // quit() waits for a reply - if Redis never connected it would hang forever
