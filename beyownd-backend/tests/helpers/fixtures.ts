@@ -17,8 +17,9 @@ const DAY = 24 * 60 * 60 * 1000;
 let counter = 0;
 const unique = () => `${Date.now().toString(36)}${(counter++).toString(36)}`;
 
-export const createStudent = async (role: 'student' | 'mentor' | 'admin' = 'student') => {
+export const createStudent = async (role: 'student' | 'mentor' | 'admin' = 'student', { onboarded = false } = {}) => {
   const user = await User.create({
+    onboardingCompleted: onboarded,
     name: 'Test Student',
     email: `student-${unique()}@example.com`,
     password: 'Str0ng@Pass',

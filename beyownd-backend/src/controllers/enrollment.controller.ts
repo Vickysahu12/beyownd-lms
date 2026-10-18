@@ -6,12 +6,19 @@ import { matchedData } from 'express-validator';
 import * as enrollmentService from '../services/enrollment.service';
 import * as quizService from '../services/quiz.service';
 import * as projectService from '../services/project.service';
+import * as paymentService from '../services/payment.service';
 
 type LessonParams = { id: string; lessonId: string };
 
 export const listMine = async (req: Request, res: Response) => {
   const enrollments = await enrollmentService.listMyEnrollments(req.user!.id);
   res.status(200).json({ success: true, enrollments });
+};
+
+export const startEnrollment = async (req: Request, res: Response) => {
+  const { cohortId } = matchedData(req, { locations: ['body'] }) as { cohortId: string };
+  const result = await paymentService.startEnrollment(req.user!.id, cohortId);
+  res.status(201).json({ success: true, ...result });
 };
 
 export const getDashboard = async (req: Request<{ id: string }>, res: Response) => {

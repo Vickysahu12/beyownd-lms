@@ -1,11 +1,15 @@
 // Per test file: start an in-memory MongoDB, connect, wipe Mongo + Redis
 // before every test so tests never depend on each other, clean up at the end.
 import os from 'os';
+import fs from 'fs';
+import path from 'path';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { redisClient } from '../../src/config/redis';
 
-let mongo: MongoMemoryServer;
+// Replica set (1 node), not a standalone server - payments use MongoDB
+// transactions, which only work on a replica set (Atlas always is one)
+let mongo: MongoMemoryReplSet;
 
 // SAFETY: beforeEach wipes data. Never let that run against anything except
 // a local server (e.g. the Atlas URI from .env).
@@ -28,7 +32,15 @@ const assertRedisUp = async () => {
 beforeAll(async () => {
   assertLocal(process.env.REDIS_URL, 'REDIS_URL');
   await assertRedisUp();
-  mongo = await MongoMemoryServer.create();
+  // Data files go inside the project (.tmp/, gitignored), not the OS temp
+  // folder: the system drive on the dev machine is nearly full, and MongoDB
+  // refuses to start a replica set with < 500 MB free. Removed on teardown.
+  const dbPath = path.join(__dirname, '..', '..', '.tmp', 'mongo-tests', `${process.pid}-${Date.now()}`);
+  fs.mkdirSync(dbPath, { recursive: true });
+  mongo = await MongoMemoryReplSet.create({
+    replSet: { count: 1, storageEngine: 'wiredTiger' },
+    instanceOpts: [{ dbPath }],
+  });
   const uri = mongo.getUri('beyownd-test');
   assertLocal(uri, 'test MongoDB');
   // MongoDB driver 7 loads 'os' via dynamic import(), which Jest's vm sandbox
@@ -48,7 +60,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await mongoose.disconnect();
-  await mongo?.stop();
+  await mongo?.stop({ doCleanup: true, force: true });
   // quit() waits for a reply - if Redis never connected it would hang forever
   if (redisClient.status === 'ready') await redisClient.quit();
   else redisClient.disconnect();
