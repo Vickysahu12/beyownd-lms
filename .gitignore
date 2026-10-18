@@ -10,3 +10,4 @@ beyownd-frontend/.next/
 # General
 *.log
 .DS_Store
+.vscode/

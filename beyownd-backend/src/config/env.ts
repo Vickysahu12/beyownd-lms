@@ -59,4 +59,11 @@ export const env = {
   resendApiKey: getEnvVar('RESEND_API_KEY'),
   emailFrom: getEnvVar('EMAIL_FROM'),
   googleClientId: getEnvVar('GOOGLE_CLIENT_ID'),
+
+  // Razorpay - test keys (rzp_test_...) in dev, live keys only on the server.
+  // KEY_ID public hai (checkout ke liye browser ko jaata hai), SECRET kabhi nahi.
+  razorpayKeyId: getEnvVar('RAZORPAY_KEY_ID'),
+  razorpayKeySecret: getEnvVar('RAZORPAY_KEY_SECRET'),
+  // Razorpay dashboard → Webhooks mein yahi string daalni hai
+  razorpayWebhookSecret: getEnvVar('RAZORPAY_WEBHOOK_SECRET'),
 };

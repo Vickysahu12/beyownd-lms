@@ -34,6 +34,7 @@
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "rate-limit-redis": "^6.0.1",
+    "razorpay": "^2.9.8",
     "resend": "^6.28.1"
   },
   "devDependencies": {

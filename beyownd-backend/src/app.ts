@@ -26,6 +26,8 @@ import userRoutes from './routes/user.routes';
 import collegeRoutes from './routes/college.routes';
 import catalogRoutes from './routes/catalog.routes';
 import enrollmentRoutes from './routes/enrollment.routes';
+import paymentRoutes from './routes/payment.routes';
+import webhookRoutes from './routes/webhook.routes';
 
 const app: Application = express();
 
@@ -64,6 +66,11 @@ app.use(
 // students mobile data pe hai, yeh seedha unka data aur load time bachata hai.
 app.use(compression());
 
+// ---- Webhooks (express.json se PEHLE) ----
+// Razorpay signature RAW body bytes pe banta hai. express.json() body parse
+// kar de to exact bytes kho jaate hai aur signature kabhi match nahi hota.
+app.use('/api/webhooks', webhookRoutes);
+
 // ---- Body parsing ----
 // 100kb limit - koi bhi legit request (signup, quiz answers, onboarding)
 // isse bahut chhoti hai. Bina limit ke koi 50MB JSON bhej ke server ki
@@ -78,6 +85,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/colleges', collegeRoutes);
 app.use('/api/courses', catalogRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // ---- 404 + global error handler (HAMESHA sabse aakhir mein) ----
 app.use(notFoundHandler);
