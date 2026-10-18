@@ -65,7 +65,13 @@ What makes the reference feel premium, and what to carry over:
 | Radius | 12 / 20 / 28 px | Inputs / cards / big frames |
 | Shadow | very soft, large blur, low opacity, slightly blue-tinted | Cards float on the sky |
 
-**Fonts:** a high-contrast display serif for headings (e.g. *Instrument Serif* or similar from Google Fonts) and a clean sans for UI and body (e.g. *Inter* or *Geist*). Load with `next/font`, subset Latin, `display: swap`.
+**Fonts** (all from Google Fonts, loaded with `next/font`, Latin subset, `display: swap`):
+
+| Font | Use |
+| --- | --- |
+| A high-contrast display serif, e.g. [*Instrument Serif*](https://fonts.google.com/specimen/Instrument+Serif) | Section headlines only (the inspo's elegant serif look). Geist has no serif, so this pairing is needed |
+| [**Geist**](https://fonts.google.com/specimen/Geist) | Everything else: nav, body, buttons, forms, the whole app UI |
+| [**Geist Mono**](https://fonts.google.com/specimen/Geist+Mono) | Credential IDs (`BYD-26-7KQ4-M9XA`), code in lessons, prices/numbers in tables, small technical labels |
 
 **Contrast warning:** the reference puts white sub-text on light blue — that fails WCAG AA. Keep the look, but make text pass AA (darker blue-grey text, or a subtle backing).
 
@@ -165,6 +171,8 @@ The goal is the feel of Linear, Stripe, Vercel or Raycast: lots of small, precis
 
 **Tools:** `motion` (Framer Motion) for component animation and springs, CSS transitions for simple hovers, `IntersectionObserver` / `motion`'s `whileInView` for reveals, `useScroll` for the How-it-works line. No GSAP-heavy timelines, no Lottie unless tiny, no three.js.
 
+**Reference for transition patterns:** [transitions.dev](https://transitions.dev/) — look up how a transition should feel (dialog open, toast, accordion, tab switch, page fade) and match its timing and easing. Reference only: build the patterns ourselves with `motion` / CSS, don't paste code you don't understand.
+
 ## 7. Copy and tone
 
 - **Simple, warm, confident English.** Short sentences. Talk to one student ("you"). No jargon ("synergy", "leverage", "world-class"), no hype ("revolutionary", "#1").
@@ -192,7 +200,30 @@ The goal is the feel of Linear, Stripe, Vercel or Raycast: lots of small, precis
 ## 9. Project setup
 
 - Create `beyownd-frontend/` at the repo root (the repo `.gitignore` already covers `beyownd-frontend/node_modules`, `.next`, `.env.local`).
-- **Next.js (App Router) + TypeScript + Tailwind CSS**, `motion`, Radix primitives (or shadcn/ui built on them), `react-markdown` (+ `rehype-sanitize`) for lessons.
+
+### Tech stack (use exactly this; latest stable versions)
+
+| Need | Use | Why |
+| --- | --- | --- |
+| Framework | **Next.js (App Router) + TypeScript** | Server rendering → fast first load on 4G, SEO for the landing and verify pages |
+| Styling | **Tailwind CSS** with the tokens in §4 as theme variables | One place for the design system, tiny CSS output |
+| UI components | [**shadcn/ui**](https://ui.shadcn.com/) (built on Radix) | Accessible menus, dialogs, accordions, tabs, forms. It copies source into the repo — restyle every component to our tokens so it never looks like default shadcn |
+| Animation | **`motion`** (Framer Motion) + CSS transitions | Springs, `whileInView` reveals, `useScroll`; no GSAP / three.js / heavy Lottie |
+| Server data in the app | **TanStack Query** | Caching, loading/error states, retries; works with the single-flight token refresh |
+| API client | A small `fetch` wrapper in `lib/api.ts` | Adds the access token, handles `TOKEN_EXPIRED` → refresh once → retry, parses `{ success, code, message, errors, details }` |
+| Forms + validation | **React Hook Form + Zod** | Signup, onboarding, project submission; show the backend's `errors[]` per field |
+| Markdown (lessons) | **`react-markdown` + `rehype-sanitize`** (+ a light syntax highlighter) | Safe rendering, never `dangerouslySetInnerHTML` |
+| Fonts / images | `next/font` (Geist, Geist Mono, display serif), `next/image` | No layout shift, optimized AVIF/WebP |
+| Icons (main set) | [**Hugeicons**](https://hugeicons.com/react-icons) (`@hugeicons/react`, free set) | One consistent stroke style across the whole product. Use **only** this set for UI icons — never mix icon families |
+| Animated icon swaps | [**Morphicons**](https://www.morphicons.com/) | Only for state changes: menu ↔ close, copy ↔ check, play ↔ pause, plus ↔ minus (FAQ) |
+| Brand logos | [**thesvg**](https://thesvg.org/) | Google (sign-in button), GitHub (project field), WhatsApp (community), UPI/payment marks. Follow each brand's usage rules |
+| Google sign-in | Google Identity Services (official script) | Returns the `idToken` the backend expects |
+| Linting | ESLint + Prettier (Next.js defaults) | |
+
+Don't add other UI kits (MUI, Chakra, Bootstrap), other icon sets (Keyline, Lucide etc. — one family only), state libraries (Redux), or CSS-in-JS. Check the license of every icon/illustration source before shipping (free tiers only unless the owner buys a licence). Ask the owner before adding any dependency that isn't in this table.
+
+### Structure and environment
+
 - One Next.js project serving both surfaces with route groups — `(marketing)` for `beyownd.in` and `(app)` for `classroom.beyownd.in` — using middleware to route by host in production. In local dev both run on `http://localhost:3000` (marketing at `/`, app under a path such as `/app`) because the backend's CORS allows exactly `http://localhost:3000`.
 - `.env.local`: `NEXT_PUBLIC_API_URL=http://localhost:5000/api`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID=…` (never commit `.env.local`).
 
@@ -245,4 +276,29 @@ npm run dev            # http://localhost:5000
 - [ ] Keyboard and screen-reader friendly; contrast AA
 - [ ] Reduced-motion version checked
 - [ ] No layout shift; images sized; below-the-fold assets lazy
+- [ ] `impeccable` critique + polish pass done, and `review-animations` on its motion (§12)
+- [ ] Only Hugeicons for UI icons; Geist / Geist Mono / display serif used as in §4
 - [ ] Shown to the owner before moving on
+
+## 12. Agent skills — which one to use when
+
+These skills are installed on this machine. Load the right one **before** the matching kind of work (they encode the quality bar in §6). The original sources: [pbakaus/impeccable](https://github.com/pbakaus/impeccable), [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill), [emilkowalski/skills](https://github.com/emilkowalski/skills), [ibelick/ui-skills](https://github.com/ibelick/ui-skills).
+
+| When you are… | Use skill | What it gives you |
+| --- | --- | --- |
+| Starting the landing page / a new section — deciding layout, hierarchy, type, colour | **`design-taste-frontend`** (taste-skill) | Anti-template direction; stops the "nice hero, generic sections" problem |
+| Designing, critiquing or polishing any section or screen; a11y, spacing, typography, UX copy, edge cases | **`impeccable`** | The main design partner: run a critique + polish pass on every section before showing it to the owner |
+| Making a component *feel* right — buttons, cards, inputs, toasts, the invisible details | **`emil-design-eng`** | Emil Kowalski's component-polish philosophy |
+| Building a specific animation (hero highlighter, plane flight, verify result, module-unlocked moment) | **`animate`** | Decides whether to animate, which property, curve, duration, interruption, exit |
+| Not sure what an effect is called | **`animation-vocabulary`** | Exact names for motion effects, useful with transitions.dev |
+| Reviewing motion you just built | **`review-animations`** | Critique of one animation or a diff |
+| Auditing all motion before the landing page is "done" | **`improve-animations`** | Prioritised motion audit across the codebase |
+| Animation stutters, scroll jank, slow on the phone | **`fixing-motion-performance`** | Layout thrashing, compositor-only properties, blur cost |
+| Quick cleanup of spacing / hierarchy / small layout issues | **`baseline-ui`** | Fast "deslop" pass |
+| Making the web app feel native on Android (tap highlight, 100vh, input zoom, safe areas) | **`mobile-native`** | Critical — most of our students are on phones |
+| Stress-testing a screen with long names, empty data, huge numbers, Hindi text | **`break-ui`** | Worst-case data render + fixes (use on dashboard, onboarding, quiz, certificate) |
+| Screenshots / checking the running site at 360 px and desktop | **`webapp-testing`** | Playwright-driven checks |
+
+**Don't use:** `minimalist-ui` (its monochrome style conflicts with our sky theme), `redesign-existing-projects` (nothing to redesign yet), `animate-expo` (React Native, not our stack).
+
+**Workflow per landing section:** `design-taste-frontend` (direction) → build → `animate` (its interaction) → `impeccable` (critique + polish) → `review-animations` → check at 360 px with `webapp-testing` → show the owner. Before calling the landing page done: `improve-animations` + `fixing-motion-performance` + Lighthouse (§8).

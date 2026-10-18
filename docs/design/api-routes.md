@@ -65,11 +65,11 @@ All auth routes are rate-limited per IP + email and per IP (campus-friendly) —
 
 Served from Redis (`cache:courses:published`, `cache:course:<slug>:outline`) — the most-hit pages never touch MongoDB after the first request.
 
-## 6. Enrollment & learning (Phase 1–2) — ✅ list, dashboard, lesson, complete, quiz, project · ⏳ POST (Phase 3)
+## 6. Enrollment & learning ✅ (Phase 1–3A)
 
 | Method | Path | Access | Purpose · key error codes |
 | --- | --- | --- | --- |
-| POST | `/enrollments` | onboarded | `{ cohortId }` → creates a `pending_payment` enrollment **and** a Razorpay order → `{ enrollment, order: { razorpayOrderId, amountPaise, keyId } }` · `ENROLLMENT_CLOSED`, `COHORT_FULL`, `ALREADY_ENROLLED` |
+| POST | `/enrollments` | onboarded | `{ cohortId }` → creates (or reuses) a `pending_payment` enrollment **and** a Razorpay order → `{ enrollment: { id, status }, checkout: { keyId, orderId, amountPaise, currency, name, description, prefill: { name, email, contact } } }` (pass `checkout` straight to Razorpay Checkout) · `ENROLLMENT_CLOSED`, `COHORT_FULL`, `ALREADY_ENROLLED`, `PAYMENT_PROVIDER_ERROR` |
 | GET | `/enrollments` | auth | My enrollments with course title, cohort dates, status, % complete |
 | GET | `/enrollments/:id` | enrolled | Dashboard for one course: modules with lock/complete state, quiz status, project status, community link |
 | GET | `/enrollments/:id/lessons/:lessonId` | enrolled | Lesson content + `completed` + `previousLessonId` / `nextLessonId` · `MODULE_LOCKED`, `ENROLLMENT_NOT_ACTIVE`, `COHORT_NOT_STARTED` |
@@ -82,11 +82,11 @@ Served from Redis (`cache:courses:published`, `cache:course:<slug>:outline`) —
 
 "Enrolled" is checked once per request by loading the enrollment by `{ _id, userId }` — a student can never read someone else's enrollment by changing the ID in the URL (returns `NOT_FOUND`, not `FORBIDDEN`, so it doesn't reveal that the ID exists).
 
-## 7. Payments (Phase 3)
+## 7. Payments ✅ (Phase 3A)
 
 | Method | Path | Access | Purpose · key error codes |
 | --- | --- | --- | --- |
-| POST | `/payments/verify` | auth | Called by the frontend right after Razorpay checkout: `{ razorpayOrderId, razorpayPaymentId, razorpaySignature }` → signature checked → enrollment activated → `{ enrollment }` · `PAYMENT_SIGNATURE_INVALID` |
+| POST | `/payments/verify` | auth | Called by the frontend right after Razorpay checkout: `{ razorpayOrderId, razorpayPaymentId, razorpaySignature }` → signature checked → enrollment activated → `{ outcome: 'activated' \| 'already_processed' \| 'cohort_full_refund_required', enrollment: { id, status } }` · `PAYMENT_SIGNATURE_INVALID` |
 | POST | `/webhooks/razorpay` | Razorpay only | `payment.captured`, `payment.failed`, `refund.processed`. Verified with `X-Razorpay-Signature`. **Source of truth** — activates the enrollment even if the student closed the tab before `/payments/verify` ran |
 | GET | `/payments` | auth | My payment history (receipts) |
 
