@@ -49,6 +49,11 @@ export const INDIAN_STATES = [
 // Koi bhi language ke letters, space, dot, apostrophe, hyphen.
 export const PERSON_NAME_PATTERN = /^[\p{L}\p{M} .'-]+$/u;
 
+// Certificate pe chhapne wala naam: sirf English (Latin) letters - PDF ke
+// fonts Hindi/other scripts nahi chhaap sakte, aur colleges English naam
+// hi maangte hai. Accented letters (é, ñ) allowed.
+export const CERTIFICATE_NAME_PATTERN = /^[A-Za-zÀ-ÖØ-öø-ÿ .'-]+$/;
+
 export const MAX_INTERESTS = 5;
 
 export type Degree = (typeof DEGREES)[number];
