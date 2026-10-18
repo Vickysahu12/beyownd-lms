@@ -28,6 +28,7 @@ import catalogRoutes from './routes/catalog.routes';
 import enrollmentRoutes from './routes/enrollment.routes';
 import paymentRoutes from './routes/payment.routes';
 import webhookRoutes from './routes/webhook.routes';
+import { credentialRoutes, verifyRoutes, fileRoutes } from './routes/credential.routes';
 
 const app: Application = express();
 
@@ -86,6 +87,9 @@ app.use('/api/colleges', collegeRoutes);
 app.use('/api/courses', catalogRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/credentials', credentialRoutes);
+app.use('/api/verify', verifyRoutes);
+app.use('/api/files', fileRoutes);
 
 // ---- 404 + global error handler (HAMESHA sabse aakhir mein) ----
 app.use(notFoundHandler);

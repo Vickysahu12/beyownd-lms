@@ -8,7 +8,7 @@
 // ────────────────────────────────────────────────────────────────────────
 
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 
 function getEnvVar(key: string): string {
   const value = process.env[key];

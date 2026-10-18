@@ -15,6 +15,7 @@ import { Server } from 'http';
 import app from './app';
 import { connectDB, disconnectDB } from './config/db';
 import { disconnectRedis } from './config/redis';
+import { closeQueues } from './jobs/queue';
 import { env } from './config/env';
 import { logger } from './utils/logger';
 
@@ -43,6 +44,7 @@ const shutdown = async (signal: string, exitCode = 0): Promise<void> => {
       );
       logger.info('HTTP server closed');
     }
+    await closeQueues(); // API jobs daalta hai - queue connection bhi band
     await disconnectDB();
     await disconnectRedis();
   } catch (err) {
