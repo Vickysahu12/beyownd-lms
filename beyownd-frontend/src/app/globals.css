@@ -1,0 +1,343 @@
+@import "tailwindcss";
+
+/*
+ * Beyownd design tokens — the single source of truth (brief §4).
+ * Light theme only for now: the sky/sunrise art direction is the brand.
+ */
+:root {
+  /* Sky */
+  --sky-1: #5dbbf0;
+  --sky-2: #9ad6f7;
+  --sky-3: #d9f0fc;
+  /* Surfaces */
+  --cream: #fbf8f2;
+  --paper: #ffffff;
+  /* Text */
+  --ink: #0e0f12;
+  --ink-soft: #2a2f38;
+  --muted: #5b6472;
+  /* Text that sits directly on the sky (passes AA on --sky-2) */
+  --sky-ink: #183a5a;
+  /* Accents */
+  --highlight: #ffd54a;
+  --sun: #ffb547;
+  --violet: #7b61ff;
+  --success: #1fa971;
+  /* Success as text/icon on light tints (passes 3:1 / 4.5:1) */
+  --success-ink: #12784f;
+  /* Lines */
+  --line: rgb(14 15 18 / 0.08);
+  --line-strong: rgb(14 15 18 / 0.14);
+
+  /* Motion (animate skill tables) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@theme inline {
+  --color-sky-1: var(--sky-1);
+  --color-sky-2: var(--sky-2);
+  --color-sky-3: var(--sky-3);
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-sky-ink: var(--sky-ink);
+  --color-highlight: var(--highlight);
+  --color-sun: var(--sun);
+  --color-violet: var(--violet);
+  --color-success: var(--success);
+  --color-success-ink: var(--success-ink);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  --radius-input: 12px;
+  --radius-card: 20px;
+  --radius-frame: 28px;
+
+  /* Soft, large-blur, blue-tinted shadows: cards float on the sky */
+  --shadow-float: 0 1px 2px rgb(24 58 90 / 0.06), 0 8px 24px -6px rgb(24 58 90 / 0.12);
+  --shadow-float-lg: 0 2px 4px rgb(24 58 90 / 0.05), 0 24px 64px -16px rgb(24 58 90 / 0.28);
+  --shadow-frame: 0 40px 120px -40px rgb(24 58 90 / 0.45), 0 12px 32px -12px rgb(24 58 90 / 0.18);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scrollbar-color: rgb(24 58 90 / 0.35) transparent;
+  scroll-padding-top: 88px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fraunces: soft corners on, optical size follows the font size automatically */
+.font-display {
+  font-variation-settings: "SOFT" 100;
+  font-optical-sizing: auto;
+}
+
+::selection {
+  background: var(--highlight);
+  color: var(--ink);
+}
+
+/* One consistent, visible focus ring everywhere */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* ---------- Ambient hero loops (CSS: runs off the main thread) ---------- */
+
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--drift, 40px), 0, 0); }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-1.5deg); }
+  50% { transform: translate3d(0, -10px, 0) rotate(1.5deg); }
+}
+
+.anim-drift {
+  animation: drift var(--drift-duration, 70s) ease-in-out infinite alternate;
+}
+
+.anim-bob {
+  animation: bob 7s ease-in-out infinite;
+  transform-origin: 50% 0%;
+}
+
+/* Paused while the hero is off-screen (toggled by HeroSky) */
+[data-paused="true"] .anim-drift,
+[data-paused="true"] .anim-bob {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-drift,
+  .anim-bob {
+    animation: none;
+  }
+}
+
+/* ---------- Link underline that grows from the left ---------- */
+
+.link-grow {
+  position: relative;
+}
+
+.link-grow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .link-grow:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+.link-grow:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* ---------- Frosted glass (web approximation, not Apple Liquid Glass) ---------- */
+
+.glass {
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.28));
+  border: 1px solid rgb(255 255 255 / 0.6);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.7),
+    0 1px 2px rgb(24 58 90 / 0.08);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: rgb(255 255 255 / 0.92);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ---------- Mobile menu sheet (Radix Dialog data-state) ----------
+ * The sheet wipes down with clip-path so its header row stays exactly where the
+ * nav pill is: the logo never moves, only the panel reveals beneath it.
+ */
+@keyframes sheet-in {
+  from { clip-path: inset(0 0 calc(100% - 56px) 0 round 28px); }
+  to { clip-path: inset(0 0 0 0 round 28px); }
+}
+@keyframes sheet-out {
+  from { clip-path: inset(0 0 0 0 round 28px); }
+  to { clip-path: inset(0 0 calc(100% - 56px) 0 round 28px); }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes item-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.menu-sheet[data-state="open"] { animation: sheet-in 420ms var(--ease-drawer); }
+.menu-sheet[data-state="closed"] { animation: sheet-out 260ms var(--ease-out); }
+.menu-overlay[data-state="open"] { animation: fade-in 300ms var(--ease-out); }
+.menu-overlay[data-state="closed"] { animation: fade-out 220ms var(--ease-out); }
+.menu-sheet[data-state="open"] .menu-item {
+  animation: item-in 360ms var(--ease-out) both;
+  animation-delay: calc(80ms + var(--i, 0) * 40ms);
+}
+.menu-sheet[data-state="closed"] .menu-item {
+  animation: fade-out 160ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-sheet[data-state="open"] { animation: fade-in 200ms ease; }
+  .menu-sheet[data-state="closed"] { animation: fade-out 160ms ease; }
+  .menu-sheet[data-state="open"] .menu-item { animation: fade-in 200ms ease both; }
+}
+
+/* ---------- Entrances (CSS, so they play before hydration and never block LCP) ---------- */
+
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes frame-rise {
+  from { opacity: 0; transform: translate3d(0, 48px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mark-draw {
+  from { transform: scaleX(0) rotate(-1.2deg); }
+  to { transform: scaleX(1) rotate(-1.2deg); }
+}
+
+.rise {
+  animation: rise 640ms var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+.frame-rise {
+  animation: frame-rise 900ms var(--ease-out) 380ms both;
+}
+.mark-draw {
+  transform-origin: left center;
+  animation: mark-draw 520ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .frame-rise {
+    animation-name: fade-in;
+    animation-duration: 300ms;
+  }
+  .mark-draw {
+    animation: none;
+  }
+}
+
+/* ---------- Desktop navigation (Radix NavigationMenu data attributes) ---------- */
+
+/* Hover capsule glides between items (position + width, one small element). */
+.nav-capsule {
+  transition:
+    transform 320ms var(--ease-out),
+    width 320ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+
+/* The dropdown morphs its size between panels instead of popping. */
+.nav-viewport {
+  width: var(--radix-navigation-menu-viewport-width);
+  height: var(--radix-navigation-menu-viewport-height);
+  transform-origin: top center;
+  transition:
+    width 340ms var(--ease-drawer),
+    height 340ms var(--ease-drawer);
+}
+.nav-viewport[data-state="open"] { animation: viewport-in 240ms var(--ease-out); }
+.nav-viewport[data-state="closed"] { animation: viewport-out 180ms var(--ease-out) forwards; }
+
+@keyframes viewport-in {
+  from { opacity: 0; transform: translate3d(0, -6px, 0) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes viewport-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translate3d(0, -4px, 0) scale(0.98); }
+}
+
+/* Panel content slides in from the side you moved toward. */
+.nav-content[data-motion="from-start"] { animation: content-from-start 300ms var(--ease-out); }
+.nav-content[data-motion="from-end"] { animation: content-from-end 300ms var(--ease-out); }
+.nav-content[data-motion="to-start"] { animation: content-to-start 240ms var(--ease-out) forwards; }
+.nav-content[data-motion="to-end"] { animation: content-to-end 240ms var(--ease-out) forwards; }
+
+@keyframes content-from-start { from { opacity: 0; transform: translate3d(-40px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes content-from-end { from { opacity: 0; transform: translate3d(40px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes content-to-start { from { opacity: 1; transform: none; } to { opacity: 0; transform: translate3d(-40px, 0, 0); } }
+@keyframes content-to-end { from { opacity: 1; transform: none; } to { opacity: 0; transform: translate3d(40px, 0, 0); } }
+
+/* Primary CTA: a single light sweep across the pill on hover. */
+.btn-shine {
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.22) 50%, transparent 70%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-shine:hover::after {
+    transform: translateX(120%);
+    transition: transform 700ms var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-capsule { transition: opacity 160ms ease; }
+  .nav-viewport { transition: none; }
+  .nav-viewport[data-state="open"],
+  .nav-viewport[data-state="closed"],
+  .nav-content[data-motion] { animation-name: fade-in; animation-duration: 160ms; }
+  .nav-viewport[data-state="closed"],
+  .nav-content[data-motion^="to-"] { animation-name: fade-out; }
+  .btn-shine::after { display: none; }
+}
