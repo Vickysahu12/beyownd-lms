@@ -115,7 +115,7 @@ One per module.
 | --- | --- | --- |
 | `courseId`, `moduleId` | ObjectId | |
 | `passPercent` | number | default 60 |
-| `questions` | embedded array | 5–30 per quiz — see below |
+| `questions` | embedded array | 3–30 per quiz — see below |
 | `updatedAt` | Date | |
 
 `questions[]`:

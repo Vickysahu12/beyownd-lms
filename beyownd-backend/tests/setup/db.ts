@@ -49,5 +49,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await mongoose.disconnect();
   await mongo?.stop();
-  await redisClient.quit();
+  // quit() waits for a reply - if Redis never connected it would hang forever
+  if (redisClient.status === 'ready') await redisClient.quit();
+  else redisClient.disconnect();
 });

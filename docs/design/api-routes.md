@@ -15,7 +15,7 @@ The frontend can be built against this document before the backend exists — th
 | Auth | `Authorization: Bearer <accessToken>` (15 min). On `401 TOKEN_EXPIRED`, call `POST /auth/refresh` (cookie) and retry once |
 | Cookies | Send `credentials: 'include'` on `/auth/*` calls — the refresh cookie lives on `/api/auth` only |
 | Success | `{ "success": true, ...data }` |
-| Error | `{ "success": false, "message": "human text", "code": "MACHINE_CODE", "errors"?: [{ field, message }] }` — **frontend branches on `code`, never on `message`** |
+| Error | `{ "success": false, "message": "human text", "code": "MACHINE_CODE", "errors"?: [{ field, message }], "details"?: { … } }` — **frontend branches on `code`, never on `message`** |
 | Lists | Cursor pagination: `?limit=20&cursor=<id>` → `{ items: [...], nextCursor: string \| null }`. `limit` max 50 |
 | IDs | MongoDB ObjectIds, except the public `credentialId` |
 | Money | Integer paise (`59900` = ₹599) |
@@ -65,7 +65,7 @@ All auth routes are rate-limited per IP + email and per IP (campus-friendly) —
 
 Served from Redis (`cache:courses:published`, `cache:course:<slug>:outline`) — the most-hit pages never touch MongoDB after the first request.
 
-## 6. Enrollment & learning (Phase 1–2) — ✅ list, dashboard, lesson, complete · ⏳ POST (Phase 3), quiz + project (Phase 2)
+## 6. Enrollment & learning (Phase 1–2) — ✅ list, dashboard, lesson, complete, quiz, project · ⏳ POST (Phase 3)
 
 | Method | Path | Access | Purpose · key error codes |
 | --- | --- | --- | --- |
@@ -74,11 +74,11 @@ Served from Redis (`cache:courses:published`, `cache:course:<slug>:outline`) —
 | GET | `/enrollments/:id` | enrolled | Dashboard for one course: modules with lock/complete state, quiz status, project status, community link |
 | GET | `/enrollments/:id/lessons/:lessonId` | enrolled | Lesson content + `completed` + `previousLessonId` / `nextLessonId` · `MODULE_LOCKED`, `ENROLLMENT_NOT_ACTIVE`, `COHORT_NOT_STARTED` |
 | POST | `/enrollments/:id/lessons/:lessonId/complete` | enrolled | Mark done (idempotent) → `{ moduleCompleted, nextModuleUnlocked, percentComplete }` |
-| GET | `/enrollments/:id/modules/:moduleId/quiz` | enrolled | Questions in shuffled order, **without answers** · `MODULE_LOCKED`, `LESSONS_INCOMPLETE` |
-| POST | `/enrollments/:id/modules/:moduleId/quiz/attempts` | enrolled | `{ answers: [{ questionId, selectedOptionIndexes }] }` → `{ scorePercent, passed, explanations, moduleCompleted, nextModuleUnlocked }` · `QUIZ_COOLDOWN` |
+| GET | `/enrollments/:id/modules/:moduleId/quiz` | enrolled | Questions in shuffled order, **without answers**, plus `passed`, `bestScorePercent`, `retryAfterSeconds` · `MODULE_LOCKED`, `LESSONS_INCOMPLETE` |
+| POST | `/enrollments/:id/modules/:moduleId/quiz/attempts` | enrolled | `{ answers: [{ questionId, selectedOptionIndexes }] }` → `{ scorePercent, passed, attemptNumber, results, moduleCompleted, nextModuleUnlocked }`. `results` = right/wrong only on a fail; correct answers + explanations only on a pass · `QUIZ_COOLDOWN` (`details.retryAfterSeconds` + `Retry-After` header) |
 | GET | `/enrollments/:id/modules/:moduleId/quiz/attempts` | enrolled | My past attempts (scores only) |
-| GET | `/enrollments/:id/project` | enrolled | Project brief + rubric + my submissions and reviews |
-| POST | `/enrollments/:id/project/submissions` | enrolled | `{ repoUrl, liveUrl?, notes? }` · `MODULES_INCOMPLETE`, `SUBMISSION_PENDING`, `PROJECT_ALREADY_APPROVED` |
+| GET | `/enrollments/:id/project` | enrolled | Brief + rubric + `unlocked`, `canSubmit`, `projectStatus` + my submissions with review feedback |
+| POST | `/enrollments/:id/project/submissions` | enrolled | `{ repoUrl (https://github.com/owner/repo), liveUrl? (https), notes? }` → 201 · `MODULES_INCOMPLETE`, `SUBMISSION_PENDING`, `PROJECT_ALREADY_APPROVED` |
 
 "Enrolled" is checked once per request by loading the enrollment by `{ _id, userId }` — a student can never read someone else's enrollment by changing the ID in the URL (returns `NOT_FOUND`, not `FORBIDDEN`, so it doesn't reveal that the ID exists).
 
@@ -168,7 +168,7 @@ All routes: `admin` only. Every change that affects money or trust writes to `au
 | `MODULE_LOCKED` | 403 | Finish the previous module first |
 | `COHORT_NOT_STARTED` | 403 | Paid content opens on the batch start date (D10); free-preview modules stay open |
 | `LESSONS_INCOMPLETE` | 403 | Mark all lessons complete before the quiz |
-| `QUIZ_COOLDOWN` | 429 | Wait before retrying (response includes `retryAfterSeconds`) |
+| `QUIZ_COOLDOWN` | 429 | Wait before retrying (`details.retryAfterSeconds`, also `Retry-After` header) |
 | `MODULES_INCOMPLETE` | 403 | Project opens after all modules |
 | `SUBMISSION_PENDING` | 409 | Already waiting for review |
 | `PROJECT_ALREADY_APPROVED` | 409 | Nothing to submit |

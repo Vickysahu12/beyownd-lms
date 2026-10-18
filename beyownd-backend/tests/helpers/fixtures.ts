@@ -10,6 +10,7 @@ import Module from '../../src/models/module.model';
 import Lesson from '../../src/models/lesson.model';
 import Cohort from '../../src/models/cohort.model';
 import Enrollment, { EnrollmentStatus } from '../../src/models/enrollment.model';
+import Quiz from '../../src/models/quiz.model';
 import { generateAccessToken } from '../../src/utils/generateTokens';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -155,3 +156,19 @@ export const createLearningSetup = async (courseOptions: CourseOptions = {}, coh
   );
   return { course, modules, lessons, cohort, student, enrollment };
 };
+
+// Quiz with 4 single-choice questions (correct = option 0 for q1-q3, option 1
+// for q4) + 1 multiple-choice (correct = [0, 2]). 1 point each → 20% per question.
+export const createQuiz = async (courseId: Types.ObjectId, moduleId: Types.ObjectId, passPercent = 60) =>
+  Quiz.create({
+    courseId,
+    moduleId,
+    passPercent,
+    questions: [
+      { prompt: 'Q1', options: ['right', 'wrong'], correctOptionIndexes: [0], explanation: 'E1' },
+      { prompt: 'Q2', options: ['right', 'wrong', 'wrong'], correctOptionIndexes: [0], explanation: 'E2' },
+      { prompt: 'Q3', options: ['right', 'wrong'], correctOptionIndexes: [0], explanation: 'E3' },
+      { prompt: 'Q4', options: ['wrong', 'right'], correctOptionIndexes: [1], explanation: 'E4' },
+      { prompt: 'Q5', type: 'multiple', options: ['yes', 'no', 'yes', 'no'], correctOptionIndexes: [0, 2], explanation: 'E5' },
+    ],
+  });
