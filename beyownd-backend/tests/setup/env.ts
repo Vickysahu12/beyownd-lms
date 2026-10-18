@@ -12,6 +12,9 @@ process.env.EMAIL_FROM = 'test@beyownd.in';
 process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
 process.env.CORS_ORIGINS = 'http://localhost:3000';
 process.env.TRUST_PROXY = '0';
+process.env.RAZORPAY_KEY_ID = 'rzp_test_dummykey';
+process.env.RAZORPAY_KEY_SECRET = 'test-razorpay-secret';
+process.env.RAZORPAY_WEBHOOK_SECRET = 'test-webhook-secret';
 // Placeholder so config/env.ts validation passes at import time. Tests never
 // use it - tests/setup/db.ts connects to a per-file in-memory MongoDB.
 process.env.MONGO_URI = 'mongodb://127.0.0.1:1/unused';
