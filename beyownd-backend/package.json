@@ -9,7 +9,9 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test:watch": "jest --watch",
-    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.test.json"
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.test.json",
+    "seed:dev": "ts-node --transpile-only scripts/seed/dev-course.ts",
+    "migrate:001": "ts-node --transpile-only scripts/migrations/001-auth-providers.ts"
   },
   "keywords": [],
   "author": "",

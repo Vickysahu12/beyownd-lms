@@ -107,3 +107,11 @@ export const tokenLimiter = createLimiter({
   name: 'token-ip', windowMinutes: 15, max: 300, keyBy: 'ip',
   message: 'Too many requests. Try again later.',
 });
+
+// ---- Public pages (catalog, verify) - sirf abuse/scraping ceiling ----
+// Ek lab ke 60 students ek IP se browse karein to bhi kaafi room. Yeh pages
+// Redis se serve hote hai, isliye limit DB bachane ke liye nahi, bots ke liye hai.
+export const publicLimiter = createLimiter({
+  name: 'public-ip', windowMinutes: 1, max: 1000, keyBy: 'ip',
+  message: 'Too many requests. Please slow down.',
+});

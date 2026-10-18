@@ -56,7 +56,7 @@ export interface IUser extends Document {
   password?: string;
   authProviders: AuthProvider[];
   googleId?: string;
-  role: 'student' | 'admin';
+  role: 'student' | 'mentor' | 'admin';
   isVerified: boolean;
   profile?: IProfile;
   onboardingCompleted: boolean;
@@ -127,9 +127,10 @@ const userSchema = new Schema<IUser>(
       unique: true,
       sparse: true,
     },
+    // mentor = sirf project review kar sakta hai (decision D6)
     role: {
       type: String,
-      enum: ['student', 'admin'],
+      enum: ['student', 'mentor', 'admin'],
       default: 'student',
     },
     // Local signups start false and can't log in until OTP-verified.

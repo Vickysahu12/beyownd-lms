@@ -24,6 +24,8 @@ import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import collegeRoutes from './routes/college.routes';
+import catalogRoutes from './routes/catalog.routes';
+import enrollmentRoutes from './routes/enrollment.routes';
 
 const app: Application = express();
 
@@ -74,6 +76,8 @@ app.use('/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/colleges', collegeRoutes);
+app.use('/api/courses', catalogRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
 
 // ---- 404 + global error handler (HAMESHA sabse aakhir mein) ----
 app.use(notFoundHandler);

@@ -1,6 +1,6 @@
 # API Routes — The Contract Between Frontend and Backend
 
-**Status:** 📝 Draft for approval (Oct 16, 2026). ✅ = built and tested.
+**Status:** ✅ Approved (Oct 16, 2026). ✅ next to a section = built and tested.
 **Data behind these routes:** [schemas.md](schemas.md) · **User journey:** [user-flow.md](user-flow.md)
 
 The frontend can be built against this document before the backend exists — that's the point of writing it first.
@@ -54,7 +54,7 @@ All auth routes are rate-limited per IP + email and per IP (campus-friendly) —
 | PATCH | `/users/me/profile` | auth | Any subset of profile fields · `ONBOARDING_REQUIRED`, `CERTIFICATE_NAME_LOCKED` |
 | GET | `/colleges?q=` | auth | Autocomplete, max 10, Redis-cached |
 
-## 5. Catalog (Phase 1) — public, cached
+## 5. Catalog ✅ (Phase 1) — public, cached
 
 | Method | Path | Access | Purpose |
 | --- | --- | --- | --- |
@@ -65,15 +65,15 @@ All auth routes are rate-limited per IP + email and per IP (campus-friendly) —
 
 Served from Redis (`cache:courses:published`, `cache:course:<slug>:outline`) — the most-hit pages never touch MongoDB after the first request.
 
-## 6. Enrollment & learning (Phase 1–2)
+## 6. Enrollment & learning (Phase 1–2) — ✅ list, dashboard, lesson, complete · ⏳ POST (Phase 3), quiz + project (Phase 2)
 
 | Method | Path | Access | Purpose · key error codes |
 | --- | --- | --- | --- |
 | POST | `/enrollments` | onboarded | `{ cohortId }` → creates a `pending_payment` enrollment **and** a Razorpay order → `{ enrollment, order: { razorpayOrderId, amountPaise, keyId } }` · `ENROLLMENT_CLOSED`, `COHORT_FULL`, `ALREADY_ENROLLED` |
 | GET | `/enrollments` | auth | My enrollments with course title, cohort dates, status, % complete |
 | GET | `/enrollments/:id` | enrolled | Dashboard for one course: modules with lock/complete state, quiz status, project status, community link |
-| GET | `/enrollments/:id/lessons/:lessonId` | enrolled | Lesson content · `MODULE_LOCKED`, `ENROLLMENT_NOT_ACTIVE` |
-| POST | `/enrollments/:id/lessons/:lessonId/complete` | enrolled | Mark done (idempotent) → updated module progress |
+| GET | `/enrollments/:id/lessons/:lessonId` | enrolled | Lesson content + `completed` + `previousLessonId` / `nextLessonId` · `MODULE_LOCKED`, `ENROLLMENT_NOT_ACTIVE`, `COHORT_NOT_STARTED` |
+| POST | `/enrollments/:id/lessons/:lessonId/complete` | enrolled | Mark done (idempotent) → `{ moduleCompleted, nextModuleUnlocked, percentComplete }` |
 | GET | `/enrollments/:id/modules/:moduleId/quiz` | enrolled | Questions in shuffled order, **without answers** · `MODULE_LOCKED`, `LESSONS_INCOMPLETE` |
 | POST | `/enrollments/:id/modules/:moduleId/quiz/attempts` | enrolled | `{ answers: [{ questionId, selectedOptionIndexes }] }` → `{ scorePercent, passed, explanations, moduleCompleted, nextModuleUnlocked }` · `QUIZ_COOLDOWN` |
 | GET | `/enrollments/:id/modules/:moduleId/quiz/attempts` | enrolled | My past attempts (scores only) |
@@ -166,6 +166,7 @@ All routes: `admin` only. Every change that affects money or trust writes to `au
 | `ALREADY_ENROLLED` | 409 | Send to existing enrollment |
 | `ENROLLMENT_NOT_ACTIVE` | 403 | Pending payment / refunded → show payment state |
 | `MODULE_LOCKED` | 403 | Finish the previous module first |
+| `COHORT_NOT_STARTED` | 403 | Paid content opens on the batch start date (D10); free-preview modules stay open |
 | `LESSONS_INCOMPLETE` | 403 | Mark all lessons complete before the quiz |
 | `QUIZ_COOLDOWN` | 429 | Wait before retrying (response includes `retryAfterSeconds`) |
 | `MODULES_INCOMPLETE` | 403 | Project opens after all modules |

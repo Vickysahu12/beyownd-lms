@@ -15,8 +15,19 @@ const assertLocal = (uri: string | undefined, name: string) => {
   }
 };
 
+// Fail fast with a clear message instead of hundreds of retry errors
+const assertRedisUp = async () => {
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+  try {
+    await Promise.race([redisClient.ping(), timeout]);
+  } catch {
+    throw new Error('Redis is not running. Start it with: docker start beyownd-redis');
+  }
+};
+
 beforeAll(async () => {
   assertLocal(process.env.REDIS_URL, 'REDIS_URL');
+  await assertRedisUp();
   mongo = await MongoMemoryServer.create();
   const uri = mongo.getUri('beyownd-test');
   assertLocal(uri, 'test MongoDB');

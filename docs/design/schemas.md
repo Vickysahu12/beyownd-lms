@@ -1,6 +1,6 @@
 # Data Model — Every Collection, Field and Index
 
-**Status:** 📝 Draft for approval (Oct 16, 2026). Built collections are marked ✅. Everything else is built in Phases 1–3 exactly as written here, unless a decision in §9 changes it.
+**Status:** ✅ Approved (Oct 16, 2026) — all decisions D1–D9 accepted as recommended, plus D10. Built collections are marked ✅.
 **Routes that use these:** [api-routes.md](api-routes.md)
 
 ---
@@ -164,7 +164,6 @@ The center of the system: everything a student does in a cohort hangs off this d
 | `cohortId` | ObjectId → cohorts | |
 | `status` | enum | `pending_payment` · `active` · `completed` · `cancelled` · `refunded` |
 | `progress` | embedded array | one entry per module — see below |
-| `currentModuleOrder` | number | the highest unlocked module (1 at start) |
 | `projectStatus` | enum | `not_submitted` · `pending_review` · `changes_requested` · `approved` |
 | `completedAt` | Date? | when every requirement was met |
 | `activatedAt` | Date? | when payment was confirmed |
@@ -178,9 +177,9 @@ The center of the system: everything a student does in a cohort hangs off this d
 | `completedLessonIds` | ObjectId[] | added with `$addToSet` (marking twice does nothing) |
 | `quizPassed` | boolean | |
 | `bestQuizScorePercent` | number | |
-| `completedAt` | Date? | all lessons done + quiz passed |
+| `completedAt` | Date? | all lessons done + quiz passed (a module without a quiz completes when its lessons are done) |
 
-**Unlock rule (sequential):** module *N* opens only when module *N − 1* has `completedAt`. Checked on the server for every lesson and quiz request — the frontend lock icon is just a display.
+**Unlock rule (sequential):** module *N* opens only when module *N − 1* has `completedAt`. The unlocked state is **computed** from `progress` on each request, not stored — a stored "current module" field could drift from the real progress. Checked on the server for every lesson and quiz request — the frontend lock icon is just a display.
 
 **Indexes:** `{ userId: 1, cohortId: 1 }` unique (no double enrollment in one batch) · `{ userId: 1, status: 1 }` (my enrollments) · `{ cohortId: 1, status: 1 }` (admin: students in a batch) · `{ status: 1, projectStatus: 1, updatedAt: 1 }` (review queue)
 
@@ -296,7 +295,7 @@ Append-only (no update/delete routes). **Indexes:** `{ targetType: 1, targetId: 
 
 Cache rule: **read-through with TTL + delete on write.** Content changes rarely and is read constantly; per-student progress is never cached.
 
-## 9. Decisions for you to approve
+## 9. Decisions (approved Oct 16, 2026)
 
 | # | Decision | Recommendation | Why |
 | --- | --- | --- | --- |
@@ -309,6 +308,7 @@ Cache rule: **read-through with TTL + delete on write.** Content changes rarely 
 | D7 | **Refunds** | Manual in Razorpay dashboard; admin marks the enrollment refunded in our panel → its credentials are revoked. Policy wording (e.g. "within 7 days, before any certificate") goes on the Refund page | Automating refunds isn't worth it for launch volume |
 | D8 | **Free preview** | Module 1 lessons of every course are readable without paying (no quiz) | Lets students judge quality before paying — the funnel in [business-model.md](../business-model.md) |
 | D9 | **Grade on the certificate** | Not at launch — "Completed" only. Add grades later from quiz + rubric scores (already stored) | Fewer things to get wrong before Diwali; the data is kept, so grades can be added without migration |
+| D10 | **When paid content opens** | On the cohort's `startDate` (free-preview modules are always open) | Same principle as D2 — the internship really runs between the printed dates. One check in `enrollment.service`, easy to change |
 
 ## 10. Size at 1,000 students (why MongoDB is comfortable)
 
