@@ -1,29 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Poppins } from "next/font/google";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// One family for everything (monday-style system): light 300 for display,
+// 400 body, 500/600 for UI labels and buttons.
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
   display: "swap",
 });
 
+// Credential IDs, prices in tables, small technical labels
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
   preload: false,
-});
-
-// Display face for headings: a warm serif with the SOFT axis turned up,
-// premium but friendly, and sturdier than a condensed serif on small screens.
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: "variable",
-  axes: ["SOFT", "opsz"],
-  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -37,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#5dbbf0",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
 };
@@ -46,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased`}
+      className={`${poppins.variable} ${geistMono.variable} antialiased`}
     >
       <body className="min-h-dvh">
         <MotionProvider>{children}</MotionProvider>
