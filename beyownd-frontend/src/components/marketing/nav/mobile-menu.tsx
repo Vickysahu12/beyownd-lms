@@ -41,7 +41,7 @@ export function MobileMenu({ courses }: { courses: CourseCard[] }) {
         <Dialog.Overlay className="menu-overlay fixed inset-0 z-50 bg-[rgb(14_15_18/0.3)] lg:hidden" />
         <Dialog.Content
           aria-describedby={undefined}
-          className="menu-sheet fixed inset-x-3 top-3 z-50 max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain rounded-[28px] bg-cream shadow-[0_24px_64px_-24px_rgb(24_58_90/0.45)] sm:inset-x-4 lg:hidden"
+          className="menu-sheet fixed inset-x-3 top-3 z-50 max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain rounded-[28px] bg-white shadow-[0_24px_64px_-24px_rgb(24_58_90/0.45)] sm:inset-x-4 lg:hidden"
           onCloseAutoFocus={(e) => {
             // Jump to the section after the scroll lock is released.
             const hash = pendingHash.current;
@@ -71,7 +71,7 @@ export function MobileMenu({ courses }: { courses: CourseCard[] }) {
                     href={item.href}
                     data-hash={item.href.replace("/", "")}
                     onClick={onSectionClick}
-                    className="group/m flex min-h-[54px] items-center justify-between border-b border-line font-display text-[27px] font-[480] tracking-[-0.02em] text-ink"
+                    className="group/m flex min-h-[54px] items-center justify-between border-b border-line display text-[28px] text-ink"
                   >
                     {item.label}
                     <HugeiconsIcon

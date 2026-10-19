@@ -14,24 +14,22 @@ export const buttonVariants = cva(
     "group/btn relative inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium",
     "transition-[transform,background-color,box-shadow,color] duration-[140ms] ease-out",
     "active:scale-[0.97] motion-reduce:active:scale-100",
-    "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink focus-visible:rounded-full",
+    "focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-brand focus-visible:rounded-full",
     "disabled:pointer-events-none disabled:opacity-50",
   ],
   {
     variants: {
       variant: {
-        primary: [
-          "bg-ink text-white",
-          "shadow-[inset_0_1px_0_rgb(255_255_255/0.14),0_1px_2px_rgb(14_15_18/0.3),0_6px_16px_-6px_rgb(14_15_18/0.45)]",
-          "hover:bg-[#23252b]",
-        ],
-        glass: ["glass text-ink", "hover:bg-white/70"],
+        primary: ["bg-brand text-white hover:bg-brand-hover hover:shadow-[0_8px_20px_-8px_rgb(49_87_232/0.6)]"],
+        dark: ["bg-ink text-white hover:bg-black"],
+        outline: ["bg-white text-ink ring-1 ring-inset ring-[#535768] hover:bg-canvas"],
+        glass: ["bg-white text-ink ring-1 ring-inset ring-line-strong hover:bg-canvas"],
         ghost: ["text-ink hover:bg-ink/5"],
       },
       size: {
         sm: "h-10 px-4 text-[14px]",
         md: "h-11 px-5 text-[15px]",
-        lg: "h-[52px] px-6 text-[15.5px]",
+        lg: "h-[54px] px-7 text-[16.5px]",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },

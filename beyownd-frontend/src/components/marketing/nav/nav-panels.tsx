@@ -55,7 +55,7 @@ export function ProgramsPanel({ courses }: { courses: CourseCard[] }) {
     <div className={cn("grid grid-cols-[1fr_240px] gap-2 p-2", shown.length ? "w-[780px]" : "w-[640px]")}>
       <div className="grid content-start gap-0.5 p-1.5">
         {shown.length === 0 ? (
-          <Link href={links.signup} className="group/row flex items-center gap-4 rounded-2xl p-3 transition-colors duration-150 hover:bg-sky-3/60">
+          <Link href={links.signup} className="group/row flex items-center gap-4 rounded-2xl p-3 transition-colors duration-150 hover:bg-canvas">
             <Thumb src="/illustrations/cover-default.svg" className="h-[84px] w-[120px]" />
             <span className="min-w-0">
               <span className="block text-[15px] font-semibold text-ink">New batches are being announced</span>
@@ -69,7 +69,7 @@ export function ProgramsPanel({ courses }: { courses: CourseCard[] }) {
             <Link
               key={c.id}
               href={`/programs/${c.slug}`}
-              className="group/row flex items-center gap-4 rounded-2xl p-2.5 transition-colors duration-150 hover:bg-sky-3/60"
+              className="group/row flex items-center gap-4 rounded-2xl p-2.5 transition-colors duration-150 hover:bg-canvas"
             >
               <Thumb src={coverFor(c)} className="h-[70px] w-[100px]" />
               <span className="min-w-0 flex-1">
@@ -109,7 +109,7 @@ export function ProgramsPanel({ courses }: { courses: CourseCard[] }) {
           height={380}
           className="absolute -right-3 top-3 w-[74px] transition-transform duration-700 ease-out group-hover/promo:-translate-y-2 group-hover/promo:rotate-3"
         />
-        <span className="relative max-w-[150px] font-display text-[22px] font-[520] leading-[1.1] tracking-[-0.02em] text-ink">
+        <span className="relative max-w-[150px] display text-[22px] leading-[1.15] text-ink">
           Not sure where to start?
         </span>
         <span className="relative mt-16">
@@ -140,7 +140,7 @@ export function CertificatesPanel() {
           <li key={d.title}>
             <Link
               href="/#certificates"
-              className="group/row flex items-center gap-4 rounded-2xl p-2.5 transition-colors duration-150 hover:bg-sky-3/60"
+              className="group/row flex items-center gap-4 rounded-2xl p-2.5 transition-colors duration-150 hover:bg-canvas"
             >
               <Thumb src={d.img} className="h-[64px] w-[92px]" />
               <span className="min-w-0">
@@ -156,7 +156,7 @@ export function CertificatesPanel() {
         <span className="grid size-9 place-items-center rounded-xl bg-white/10 text-highlight">
           <HugeiconsIcon icon={SecurityCheckIcon} size={19} strokeWidth={1.7} aria-hidden />
         </span>
-        <span className="mt-4 font-display text-[22px] font-[500] leading-[1.12] tracking-[-0.02em]">
+        <span className="mt-4 display text-[22px] leading-[1.15]">
           Any college can check it in seconds
         </span>
         <span className="mt-2 text-[13px] leading-snug text-white/70">
