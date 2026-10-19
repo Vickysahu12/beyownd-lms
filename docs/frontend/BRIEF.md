@@ -13,6 +13,7 @@ You are building the Beyownd frontend: first the marketing landing page (`beyown
 5. **Document as you go** — same convention as the backend (see [../README.md](../README.md)): a build doc `docs/phases/phase-4-frontend.md` (what/why/how) and a separate interview doc `docs/interview/phase-4-frontend.md` (how to explain it, decisions, trade-offs, Q&A). The owner uses these in job interviews, so only claim what was actually built and measured.
 6. **The owner writes in Hinglish.** Explain things simply. The website copy itself is in clear, simple English (see §7).
 7. **Stay in your folder.** Another session is working on `beyownd-backend/` at the same time. Only edit `beyownd-frontend/` and `docs/` files about the frontend. If the API is missing something or a response is awkward, don't change the backend — write it down in `docs/frontend/backend-requests.md` and tell the owner; the backend session will handle it.
+8. **Task tracker:** [../REMAINING.md](../REMAINING.md). When you finish a frontend task, update **only its row in §3** (F1–F16: status ✅/🟡 and a short note). Never edit §1 (owner's tasks) or §2 (backend's tasks) — the backend session updates those, and two sessions editing the same rows overwrite each other.
 
 ## 2. Read these first
 
@@ -22,6 +23,7 @@ You are building the Beyownd frontend: first the marketing landing page (`beyown
 | [../design/user-flow.md](../design/user-flow.md) | Domains, login methods, onboarding questions and fields |
 | [../design/api-routes.md](../design/api-routes.md) | Every endpoint, response shape and error code — build the app against this |
 | [../design/schemas.md](../design/schemas.md) §9 | Product decisions D1–D10 (e.g. certificates issue after the batch end date) |
+| [../REMAINING.md](../REMAINING.md) | **Every task left until launch** — your tasks are §3 (F1–F16), with order, dependencies and target dates |
 | [../roadmap.md](../roadmap.md) | Timeline: go-live **Nov 6, 2026** |
 | [inspo/hero-inspo.png](inspo/hero-inspo.png) | Visual direction |
 
