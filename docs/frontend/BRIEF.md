@@ -23,6 +23,7 @@ You are building the Beyownd frontend: first the marketing landing page (`beyown
 | [../design/user-flow.md](../design/user-flow.md) | Domains, login methods, onboarding questions and fields |
 | [../design/api-routes.md](../design/api-routes.md) | Every endpoint, response shape and error code — build the app against this |
 | [../design/schemas.md](../design/schemas.md) §9 | Product decisions D1–D10 (e.g. certificates issue after the batch end date) |
+| [PAGES.md](PAGES.md) | **Every page of the website + app**: what it contains, rendering, API, SEO (sitemap, robots, JSON-LD, OG images), build order |
 | [../REMAINING.md](../REMAINING.md) | **Every task left until launch** — your tasks are §3 (F1–F16), with order, dependencies and target dates |
 | [../roadmap.md](../roadmap.md) | Timeline: go-live **Nov 6, 2026** |
 | [inspo/hero-inspo.png](inspo/hero-inspo.png) | Visual direction |

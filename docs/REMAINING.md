@@ -71,7 +71,7 @@ Business  [█░░░░░░░░░░░░░░░░░░░]  5%
 | --- | --- | --- | --- |
 | F1 | Landing: nav | ✅ | |
 | F2 | Landing: hero | ✅ | |
-| F3 | Landing: problem, how it works, programs, what you get, verify demo, pricing, FAQ, final CTA, footer (GrewDo line) | ⏳ | BRIEF §5.3–5.11 |
+| F3 | Landing: problem, how it works, programs, what you get, verify demo, pricing, FAQ, final CTA, footer (GrewDo line) | ✅ | Rebuilt Oct 20 in a monday.com-inspired style (Poppins, white canvas, product boards). Includes "Send to parents". Footer has GrewDo placeholders (Y1/Y5); policy links point to F4 pages (not built yet) |
 | F4 | Policy pages (Terms, Privacy, Refund, Contact) | ⏳ | Needs Y5 text |
 | F5 | App setup: API client, single-flight token refresh, TanStack Query, auth context | ⏳ | BRIEF §10.1 |
 | F6 | Signup / login / OTP / Google / forgot + reset password | ⏳ | APIs ready ✅ |

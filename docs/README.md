@@ -17,6 +17,7 @@
 | --- | --- | --- |
 | [phases/](phases/) | Code / future you | What we built, why, how it works, done checklist |
 | [interview/](interview/) | You, in an interview | How to explain it, trade-offs, bugs fixed, Q&A |
+| [frontend/PAGES.md](frontend/PAGES.md) | Frontend session | Every page + SEO + build order |
 | [frontend/BRIEF.md](frontend/BRIEF.md) | Frontend session | Brand, landing sections, motion bar, app screens, API integration rules |
 | [design/](design/) | Code | [user-flow.md](design/user-flow.md) · [schemas.md](design/schemas.md) (every collection) · [api-routes.md](design/api-routes.md) (every endpoint) |
 | [module/](module/) | Code | Early build logs (Day 1, auth module) |
