@@ -30,10 +30,15 @@ const tile = (a, b, body) =>
 const lines = (x, y, widths, gap = 9, color = "#d9dee5") =>
   widths.map((w, i) => `<rect x="${x}" y="${y + i * gap}" width="${w}" height="3.2" rx="1.6" fill="${color}"/>`).join("");
 
-const mark = (x, y, s = 14) =>
-  `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="${r1(s * 0.28)}" fill="#0e0f12"/>` +
-  `<circle cx="${x + s / 2}" cy="${r1(y + s * 0.6)}" r="${r1(s * 0.22)}" fill="#ffd54a"/>` +
-  `<rect x="${r1(x + s * 0.15)}" y="${r1(y + s * 0.6)}" width="${r1(s * 0.7)}" height="${r1(s * 0.3)}" fill="#0e0f12"/>`;
+// The Beyownd mark (same paths as src/components/brand/logo.tsx), scaled into an s×s box.
+const mark = (x, y, s = 14) => {
+  const k = s / 64;
+  return `<g transform="translate(${x} ${y}) scale(${r1(k * 1000) / 1000})"><g transform="translate(2 -3.6) scale(1 1.13)">
+<path d="M14 13.5a3.5 3.5 0 0 1 3.5-3.5H24v15.2l13.6 7.3a1.4 1.4 0 0 1 0 2.5L19.5 50.6A3.6 3.6 0 0 1 14 47.6z" fill="#1c3260"/>
+<path d="M24 31.6v9.4l8.4-4.7z" fill="#fffdf8"/>
+<path d="M26.5 10.5l23.6 19.7a2.3 2.3 0 0 1 0 3.5L33.6 47.6a2.6 2.6 0 0 1-3.9-3.3l11.1-11.1a1.5 1.5 0 0 0 0-2.1z" fill="#ec2a2f"/>
+</g></g>`;
+};
 
 function qr(x, y, size, seed) {
   const rand = rng(seed);

@@ -31,7 +31,7 @@ const r1 = (n) => Math.round(n * 10) / 10;
  * plus faint per-puff highlights for painterly lumpiness.
  * warm: 0..1, how much sun-coloured light catches the right side.
  */
-function cloud({ seed, w, h, puffs, warm = 0, humps = 2 }) {
+function cloud({ seed, w, h, puffs, warm = 0, humps = 2, vol = ["#ffffff", "#f7fbfe", "#d6eaf7", "#b6d6ee"] }) {
   const rand = rng(seed);
   const base = h * 0.8;
   const centres = Array.from({ length: humps }, (_, k) => (k + 0.5) / humps + (rand() - 0.5) * 0.12);
@@ -76,8 +76,8 @@ function cloud({ seed, w, h, puffs, warm = 0, humps = 2 }) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
 <defs>
   <linearGradient id="vol" x1="0" y1="${r1(top)}" x2="0" y2="${r1(base + h * 0.04)}" gradientUnits="userSpaceOnUse">
-    <stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#f7fbfe"/>
-    <stop offset="0.8" stop-color="#d6eaf7"/><stop offset="1" stop-color="#b6d6ee"/>
+    <stop offset="0" stop-color="${vol[0]}"/><stop offset="0.45" stop-color="${vol[1]}"/>
+    <stop offset="0.8" stop-color="${vol[2]}"/><stop offset="1" stop-color="${vol[3]}"/>
   </linearGradient>
   <linearGradient id="warm" x1="0" y1="0" x2="1" y2="0">
     <stop offset="0.35" stop-color="#ffd9a0" stop-opacity="0"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="${warm}"/>
