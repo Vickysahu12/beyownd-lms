@@ -154,9 +154,11 @@ userSchema.index({ 'profile.collegeId': 1 });
 // isSelected check: password is `select: false`, so a user loaded normally
 // (e.g. Google linking an existing account) has password === undefined even
 // though one exists in the DB. Only enforce when the field was loaded/set.
+// `authProviders?.` - a user loaded with only some fields (e.g. .select({ role: 1 }))
+// must still be savable. invalidate → 400, not a 500.
 userSchema.pre('validate', function () {
-  if (this.authProviders.includes('local') && this.isSelected('password') && !this.password) {
-    throw new Error('Password is required for email/password accounts');
+  if (this.authProviders?.includes('local') && this.isSelected('password') && !this.password) {
+    this.invalidate('password', 'Password is required for email/password accounts');
   }
 });
 

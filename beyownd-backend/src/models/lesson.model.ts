@@ -43,9 +43,11 @@ const lessonSchema = new Schema<ILesson>(
   { timestamps: true }
 );
 
+// this.invalidate() (throw nahi) - Mongoose ValidationError banta hai →
+// error handler 400 deta hai. Plain `throw new Error` = 500 (bug jaisa dikhta).
 lessonSchema.pre('validate', function () {
   if (this.type === 'video' && !this.videoYoutubeId) {
-    throw new Error('Video lessons need a YouTube video ID');
+    this.invalidate('videoYoutubeId', 'Video lessons need a YouTube video ID');
   }
 });
 

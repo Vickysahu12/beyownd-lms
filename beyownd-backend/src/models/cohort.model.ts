@@ -54,9 +54,11 @@ const cohortSchema = new Schema<ICohort>(
   { timestamps: true }
 );
 
+// this.invalidate() (throw nahi) - Mongoose ValidationError banta hai →
+// error handler 400 deta hai. Plain `throw new Error` = 500 (bug jaisa dikhta).
 cohortSchema.pre('validate', function () {
-  if (this.endDate <= this.startDate) throw new Error('Cohort endDate must be after startDate');
-  if (this.enrollClosesAt <= this.enrollOpensAt) throw new Error('Enrollment must close after it opens');
+  if (this.endDate <= this.startDate) this.invalidate('endDate', 'Batch end date must be after the start date');
+  if (this.enrollClosesAt <= this.enrollOpensAt) this.invalidate('enrollClosesAt', 'Enrollment must close after it opens');
 });
 
 // "Is course ke open batches, jaldi shuru hone wale pehle"

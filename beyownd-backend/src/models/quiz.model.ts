@@ -51,12 +51,17 @@ const questionSchema = new Schema<IQuestion>({
 // Galat quiz data DB mein na jaye: correct index options ke range mein ho,
 // single question ka exactly ek answer, multiple ka kam se kam ek
 questionSchema.pre('validate', function () {
+  // invalidate → 400 ValidationError (plain throw would be a 500)
   const { options, correctOptionIndexes: correct, type } = this;
-  if (correct.length === 0) throw new Error('Each question needs at least one correct option');
-  if (type === 'single' && correct.length !== 1) throw new Error('Single-choice questions need exactly one correct option');
-  if (new Set(correct).size !== correct.length) throw new Error('Duplicate correct option index');
-  if (correct.some((i) => !Number.isInteger(i) || i < 0 || i >= options.length)) {
-    throw new Error('Correct option index out of range');
+  const bad = (message: string) => this.invalidate('correctOptionIndexes', message);
+  if (correct.length === 0) {
+    bad('Each question needs at least one correct option');
+  } else if (type === 'single' && correct.length !== 1) {
+    bad('Single-choice questions need exactly one correct option');
+  } else if (new Set(correct).size !== correct.length) {
+    bad('Duplicate correct option index');
+  } else if (correct.some((i) => !Number.isInteger(i) || i < 0 || i >= options.length)) {
+    bad(`Correct option index out of range - options are numbered 0 to ${options.length - 1}`);
   }
 });
 
