@@ -24,7 +24,7 @@
 // refund karta hai (launch pe automation nahi - rare case).
 // ────────────────────────────────────────────────────────────────────────
 
-import mongoose, { isValidObjectId, ClientSession } from 'mongoose';
+import mongoose, { isValidObjectId, ClientSession, Types } from 'mongoose';
 import Payment, { IPayment } from '../models/payment.model';
 import Enrollment from '../models/enrollment.model';
 import Cohort from '../models/cohort.model';
@@ -297,7 +297,7 @@ export const handleWebhookEvent = async (event: RazorpayWebhookEvent, eventId?: 
 // refund ke baad certificate/offer letter valid nahi rehna chahiye.
 export const markRefunded = async (razorpayPaymentId: string) => {
   const session = await mongoose.startSession();
-  let enrollmentId: unknown = null;
+  let enrollmentId: Types.ObjectId | null = null;
   try {
     const result = await session.withTransaction(async () => {
       const payment = await Payment.findOneAndUpdate(

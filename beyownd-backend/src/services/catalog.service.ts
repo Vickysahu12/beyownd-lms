@@ -146,7 +146,7 @@ export const listPublishedCourses = (): Promise<CourseCard[]> =>
     if (courses.length === 0) return [];
 
     // Saare courses ke batches EK query mein (N+1 nahi)
-    const cohorts = await Cohort.find(listedCohortsFilter(courses.map((c) => c._id as Types.ObjectId))).sort({ startDate: 1 });
+    const cohorts = await Cohort.find(listedCohortsFilter(courses.map((c) => c._id))).sort({ startDate: 1 });
 
     return courses.map((course) => {
       const own = cohorts.filter((c) => String(c.courseId) === String(course._id));

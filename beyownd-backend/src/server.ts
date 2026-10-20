@@ -88,4 +88,5 @@ process.on('uncaughtException', (err) => {
   void shutdown('uncaughtException', 1);
 });
 
-startServer();
+// Errors inside are handled (fatal log + exit); `void` marks the promise as intentionally not awaited
+void startServer();

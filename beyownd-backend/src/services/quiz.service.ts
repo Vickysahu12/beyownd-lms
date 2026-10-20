@@ -196,7 +196,7 @@ export const submitAttempt = async (
   });
 
   // Enrollment progress: best score ($max - kabhi neeche nahi jaata), pass flag
-  await ensureProgressEntry(enrollment._id as Types.ObjectId, moduleObjectId);
+  await ensureProgressEntry(enrollment._id, moduleObjectId);
   const updated = await Enrollment.findOneAndUpdate(
     { _id: enrollment._id, 'progress.moduleId': moduleObjectId },
     {

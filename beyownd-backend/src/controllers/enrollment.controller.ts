@@ -16,7 +16,7 @@ export const listMine = async (req: Request, res: Response) => {
 };
 
 export const startEnrollment = async (req: Request, res: Response) => {
-  const { cohortId } = matchedData(req, { locations: ['body'] }) as { cohortId: string };
+  const { cohortId } = matchedData<{ cohortId: string }>(req, { locations: ['body'] });
   const result = await paymentService.startEnrollment(req.user!.id, cohortId);
   res.status(201).json({ success: true, ...result });
 };
@@ -46,7 +46,7 @@ export const getQuiz = async (req: Request<ModuleParams>, res: Response) => {
 };
 
 export const submitQuizAttempt = async (req: Request<ModuleParams>, res: Response) => {
-  const { answers } = matchedData(req, { locations: ['body'] }) as { answers: quizService.AnswerInput[] };
+  const { answers } = matchedData<{ answers: quizService.AnswerInput[] }>(req, { locations: ['body'] });
   const result = await quizService.submitAttempt(req.params.id, req.user!.id, req.params.moduleId, answers);
   res.status(200).json({ success: true, ...result });
 };
@@ -64,7 +64,7 @@ export const getProject = async (req: Request<{ id: string }>, res: Response) =>
 };
 
 export const submitProject = async (req: Request<{ id: string }>, res: Response) => {
-  const input = matchedData(req, { locations: ['body'] }) as projectService.SubmissionInput;
+  const input = matchedData<projectService.SubmissionInput>(req, { locations: ['body'] });
   const result = await projectService.submitProject(req.params.id, req.user!.id, input);
   res.status(201).json({ success: true, ...result });
 };

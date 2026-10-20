@@ -12,13 +12,13 @@ export const getMe = async (req: Request, res: Response) => {
 };
 
 export const completeOnboarding = async (req: Request, res: Response) => {
-  const data = matchedData(req, { locations: ['body'] }) as userService.ProfileInput;
+  const data = matchedData<userService.ProfileInput>(req, { locations: ['body'] });
   const user = await userService.completeOnboarding(req.user!.id, data);
   res.status(200).json({ success: true, user });
 };
 
 export const updateProfile = async (req: Request, res: Response) => {
-  const data = matchedData(req, { locations: ['body'] }) as Partial<userService.ProfileInput>;
+  const data = matchedData<Partial<userService.ProfileInput>>(req, { locations: ['body'] });
   const user = await userService.updateProfile(req.user!.id, data);
   res.status(200).json({ success: true, user });
 };

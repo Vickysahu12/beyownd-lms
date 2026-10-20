@@ -20,7 +20,7 @@ import { putObject } from '../utils/storage.util';
 import { invalidate } from '../utils/cache';
 import { sendDocumentReadyEmail } from '../utils/email.util';
 import { logger } from '../utils/logger';
-import { enqueueDocumentEmail, DocumentJobName, DocumentJobData } from './queue';
+import { enqueueDocumentEmail, DocumentJobData } from './queue';
 
 export const pdfKeyFor = (type: string, credentialId: string) => `${type.replace(/_/g, '-')}/${credentialId}.pdf`;
 
@@ -60,7 +60,7 @@ const sendEmail = async (credentialId: string) => {
   return 'sent';
 };
 
-export const processDocumentJob = async (job: { name: DocumentJobName | string; data: DocumentJobData }) => {
+export const processDocumentJob = async (job: { name: string; data: DocumentJobData }) => {
   switch (job.name) {
     case 'generate-pdf':
       return generatePdf(job.data.credentialId);

@@ -8,11 +8,11 @@ import { isValidWebhookSignature } from '../utils/razorpay.util';
 import { AppError } from '../utils/AppError';
 
 export const verify = async (req: Request, res: Response) => {
-  const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = matchedData(req, { locations: ['body'] }) as {
+  const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = matchedData<{
     razorpayOrderId: string;
     razorpayPaymentId: string;
     razorpaySignature: string;
-  };
+  }>(req, { locations: ['body'] });
   const result = await paymentService.verifyCheckout(req.user!.id, razorpayOrderId, razorpayPaymentId, razorpaySignature);
   res.status(200).json({ success: true, ...result });
 };

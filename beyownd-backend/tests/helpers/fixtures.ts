@@ -169,12 +169,12 @@ export const createEnrollment = async (
 // One call: published course + started open batch + active student
 export const createLearningSetup = async (courseOptions: CourseOptions = {}, cohortOptions: CohortOptions = {}) => {
   const { course, modules, lessons } = await createCourse(courseOptions);
-  const cohort = await createCohort(course._id as Types.ObjectId, cohortOptions);
+  const cohort = await createCohort(course._id, cohortOptions);
   const student = await createStudent();
   const enrollment = await createEnrollment(
-    student.user._id as Types.ObjectId,
-    course._id as Types.ObjectId,
-    cohort._id as Types.ObjectId
+    student.user._id,
+    course._id,
+    cohort._id
   );
   return { course, modules, lessons, cohort, student, enrollment };
 };

@@ -1,5 +1,7 @@
 # Beyownd Docs
 
+[![CI](https://github.com/Vickysahu12/beyownd-lms/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Vickysahu12/beyownd-lms/actions/workflows/ci.yml)
+
 ## Start here
 
 | Doc | What it is |
@@ -15,6 +17,7 @@
 
 | Folder | Audience | Contents |
 | --- | --- | --- |
+| [phases/ci-quality.md](phases/ci-quality.md) | Code | ESLint + GitHub Actions CI: rules, pipeline, what lint found |
 | [phases/](phases/) | Code / future you | What we built, why, how it works, done checklist |
 | [interview/](interview/) | You, in an interview | How to explain it, trade-offs, bugs fixed, Q&A |
 | [frontend/PAGES.md](frontend/PAGES.md) | Frontend session | Every page + SEO + build order |

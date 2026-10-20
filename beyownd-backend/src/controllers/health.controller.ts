@@ -27,15 +27,11 @@ export const liveness = (_req: Request, res: Response) => {
 };
 
 export const readiness = async (_req: Request, res: Response) => {
-  const mongo = mongoose.connection.readyState === 1 ? 'up' : 'down';
+  const mongo = mongoose.connection.readyState === mongoose.ConnectionStates.connected ? 'up' : 'down';
 
-  let redis: 'up' | 'down' = 'down';
-  try {
-    await withTimeout(redisClient.ping(), 1000);
-    redis = 'up';
-  } catch {
-    redis = 'down';
-  }
+  const redis = await withTimeout(redisClient.ping(), 1000)
+    .then(() => 'up' as const)
+    .catch(() => 'down' as const);
 
   const healthy = mongo === 'up' && redis === 'up';
   res.status(healthy ? 200 : 503).json({

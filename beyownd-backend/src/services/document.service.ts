@@ -33,11 +33,11 @@ const MARGIN = 56;
 // Smart quotes/dashes → ASCII, aur jo WinAnsi (Latin-1) mein nahi woh '?'
 export const pdfSafe = (text: string): string =>
   text
-    .replace(/[‘’ʼ]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[–—]/g, '-')
-    .replace(/…/g, '...')
-    .replace(/[^\x20-\x7E -ÿ]/g, '?');
+    .replace(/[\u2018\u2019\u02BC]/g, "'") // curly single quotes, modifier apostrophe
+    .replace(/[\u201C\u201D]/g, '"') // curly double quotes
+    .replace(/[\u2013\u2014]/g, '-') // en / em dash
+    .replace(/\u2026/g, '...') // ellipsis
+    .replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '?'); // anything outside Latin-1 (WinAnsi)
 
 const formatDate = (d: Date) =>
   new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });

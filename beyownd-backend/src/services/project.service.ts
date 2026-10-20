@@ -17,7 +17,6 @@
 // Backup: { enrollmentId, version } unique index.
 // ────────────────────────────────────────────────────────────────────────
 
-import { Types } from 'mongoose';
 import Course from '../models/course.model';
 import Enrollment, { IEnrollment } from '../models/enrollment.model';
 import ProjectSubmission, { IProjectSubmission } from '../models/projectSubmission.model';
@@ -123,7 +122,7 @@ export const submitProject = async (enrollmentId: string, userId: string, input:
   } catch (err) {
     // Insert fail hua - gate wapas kholo, warna student hamesha "pending" mein atka rahega
     await Enrollment.updateOne(
-      { _id: enrollment._id as Types.ObjectId, projectStatus: 'pending_review' },
+      { _id: enrollment._id, projectStatus: 'pending_review' },
       { $set: { projectStatus: previousStatus } }
     );
     throw err;

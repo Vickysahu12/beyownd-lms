@@ -54,11 +54,11 @@ export const findOrCreateCollege = async (rawName: string): Promise<ICollege> =>
     );
 
   try {
-    return (await upsert())!;
+    return (await upsert());
   } catch (err: any) {
     // Do parallel upserts dono "nahi mila" dekh ke insert karein to ek
     // unique index pe fail hota hai - retry mein woh existing doc mil jaata hai
-    if (err?.code === 11000) return (await upsert())!;
+    if (err?.code === 11000) return (await upsert());
     throw err;
   }
 };

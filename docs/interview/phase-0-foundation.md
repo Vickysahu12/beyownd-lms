@@ -117,3 +117,15 @@ A: 10 rounds — tens of milliseconds per hash on a small VPS: expensive for off
 ## At 100× scale I would…
 
 Managed Redis with replication; a "your devices" page to list and revoke sessions; CAPTCHA on signup and forgot-password; a Redis denylist for instant bans; a transactional email queue (BullMQ) so a slow email provider never slows signup; and an identity provider if colleges needed SSO.
+
+## CI and code quality (built Oct 20)
+
+**One line:** "Every push runs a GitHub Actions pipeline — ESLint with type-aware rules, the TypeScript compiler, and the full integration suite against an in-memory MongoDB replica set and a real Redis service container. A red build means don't ship."
+
+**Story — what the linter found on day one.** "When I added type-aware ESLint, the first run flagged 26 issues. Most were cosmetic, but three were real: a startup promise that wasn't explicitly handled, an `unknown` value being stringified in the refund path, and invisible Unicode characters — a no-break space and smart quotes — written literally inside a regex in the PDF sanitizer. It worked, but nobody reviewing the code could see what it matched. I rewrote it with explicit escape codes."
+
+**Q: Why type-aware lint rules?** The costliest bugs here are async — a payment or email call whose promise is silently dropped. `no-floating-promises` and `no-misused-promises` need type information to catch those.
+
+**Q: Why turn some rules off?** The `no-unsafe-*` family fires on every third-party payload that arrives untyped (webhooks, driver errors). A rule that's always noisy gets ignored; I kept the ones that find bugs.
+
+**Q: How does CI handle MongoDB?** `mongodb-memory-server` downloads a MongoDB binary; I point it at a cached directory so it downloads once, and run it as a single-node replica set because payments use transactions.

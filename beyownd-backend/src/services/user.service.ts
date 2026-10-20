@@ -97,7 +97,7 @@ export const completeOnboarding = async (userId: string, input: ProfileInput): P
   const { college: collegeName, ...rest } = input;
   const college = await findOrCreateCollege(collegeName);
 
-  user.profile = { ...rest, collegeId: college._id as any, collegeName: college.name } as IProfile;
+  user.profile = { ...rest, collegeId: college._id, collegeName: college.name };
   user.onboardingCompleted = true;
   user.onboardedAt = new Date();
   await user.save();
@@ -130,7 +130,7 @@ export const updateProfile = async (userId: string, input: Partial<ProfileInput>
     const college = await findOrCreateCollege(newCollegeName);
     const previousId = String(user.profile.collegeId);
     if (String(college._id) !== previousId) {
-      user.profile.collegeId = college._id as any;
+      user.profile.collegeId = college._id;
       user.profile.collegeName = college.name;
       collegeChange = { from: previousId, to: String(college._id) };
     }

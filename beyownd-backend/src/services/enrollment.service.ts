@@ -275,7 +275,7 @@ export const completeLesson = async (enrollmentId: string, userId: string, lesso
   const moduleObjectId = new Types.ObjectId(lesson.moduleId);
 
   // Step 1: progress entry (atomic, duplicate-safe)
-  await ensureProgressEntry(enrollment._id as Types.ObjectId, moduleObjectId);
+  await ensureProgressEntry(enrollment._id, moduleObjectId);
 
   // Step 2: lesson add - $addToSet, do baar mark karo to bhi ek hi baar
   const updated = await Enrollment.findOneAndUpdate(
