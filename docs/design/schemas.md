@@ -257,7 +257,7 @@ Offer letters, certificates and completion letters — the product the business 
 
 **Indexes:** `{ credentialId: 1 }` unique (public verify) · `{ enrollmentId: 1, type: 1 }` unique · `{ userId: 1, createdAt: -1 }` (my documents)
 
-### 6.2 `auditlogs`
+### 6.2 `auditlogs` ✅
 
 Every admin action that affects trust or money: revoke, review decision, refund, price change, manual issue.
 

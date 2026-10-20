@@ -21,9 +21,17 @@ import { env } from '../config/env';
 
 export const DOCUMENTS_QUEUE = 'documents';
 
-export type DocumentJobName = 'generate-pdf' | 'send-document-email';
+export type DocumentJobName =
+  | 'generate-pdf' // credentialId → PDF banao
+  | 'send-document-email' // credentialId → "document ready" email
+  | 'issue-completion-documents' // enrollmentId → certificate + completion letter (batch end pe)
+  | 'send-review-email' // submissionId → "project reviewed" email
+  | 'completion-sweep'; // hourly safety net - koi completed student certificate ke bina na rahe
+
 export interface DocumentJobData {
-  credentialId: string;
+  credentialId?: string;
+  enrollmentId?: string;
+  submissionId?: string;
 }
 
 // BullMQ ko apna connection chahiye with maxRetriesPerRequest: null
@@ -54,6 +62,29 @@ export const enqueuePdf = (credentialId: string) =>
 
 export const enqueueDocumentEmail = (credentialId: string) =>
   getDocumentsQueue().add('send-document-email', { credentialId }, { jobId: `email-${credentialId}` });
+
+// DELAYED job: batch end date tak ruk ke chalta hai (decision D2). Redis mein
+// rehta hai, isliye worker restart se bhi khota nahi. Hourly sweep backup hai.
+export const enqueueCompletionDocuments = (enrollmentId: string, delayMs = 0) =>
+  getDocumentsQueue().add(
+    'issue-completion-documents',
+    { enrollmentId },
+    { jobId: `completion-${enrollmentId}`, delay: Math.max(0, delayMs) }
+  );
+
+export const enqueueReviewEmail = (submissionId: string) =>
+  getDocumentsQueue().add('send-review-email', { submissionId }, { jobId: `review-email-${submissionId}` });
+
+export const COMPLETION_SWEEP_EVERY_MS = 60 * 60 * 1000;
+
+// Repeatable job - worker start pe register (upsert = dobara register karne
+// se duplicate nahi banta)
+export const scheduleCompletionSweep = () =>
+  getDocumentsQueue().upsertJobScheduler(
+    'completion-sweep',
+    { every: COMPLETION_SWEEP_EVERY_MS },
+    { name: 'completion-sweep', data: {} }
+  );
 
 export const closeQueues = async () => {
   if (documentsQueue) {

@@ -29,7 +29,7 @@ Anything not on that path (leaderboard, streaks, Judge0, comments) is **not a la
 | 0 ✅ | Foundation & hardening | Oct 15 – 16 | Auth bugs fixed, error/logging/security base, all schemas + API routes designed |
 | 1 ✅ | Learning core (backend) | Oct 16 – 17 | Tracks, cohorts, modules, lessons, enrollment, sequential unlock, caching |
 | 2 ✅ | Assessment (backend) | Oct 18 | Quizzes, auto-grading, progress, project submission |
-| 3 | Payments & credentials (backend) | Oct 22 – 27 | Razorpay, offer letter, mentor review, certificate + letter PDFs (BullMQ), verify API |
+| 3 ✅ | Payments & credentials (backend) | Oct 18 – 20 | Razorpay, offer letter, mentor review, certificate + letter PDFs (BullMQ), verify API |
 | 4 | Frontend (Next.js) | Oct 18 – Nov 1 (parallel) | Landing, auth, dashboard, course player, quiz, payment, verify page |
 | 5 | Admin panel | Oct 28 – Nov 1 | Content CRUD, review queue, students, revoke |
 | 6 | Production readiness | Nov 1 – 4 | Docker, deploy, Sentry, backups, load test (1000 users), security pass |

@@ -74,3 +74,30 @@ export const sendDocumentReadyEmail = async (
     throw new AppError(503, 'Could not send email', 'EMAIL_FAILED');
   }
 };
+
+// Mentor decision ke baad student ko (worker se, retry ke saath)
+export const sendReviewResultEmail = async (
+  email: string,
+  name: string,
+  decision: 'approved' | 'changes_requested',
+  courseTitle: string,
+  totalPercent: number
+): Promise<void> => {
+  const escape = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const approved = decision === 'approved';
+  const { error } = await resend.emails.send({
+    from: env.emailFrom,
+    to: email,
+    subject: approved ? 'Your project is approved' : 'Your project needs a few changes',
+    html: approved
+      ? `<p>Hi ${escape(name)},</p>
+<p>Your final project for <strong>${escape(courseTitle)}</strong> has been approved (score: ${totalPercent}%). Congratulations!</p>
+<p>Your completion certificate and letter will be issued after your batch ends. You will get an email when they are ready.</p>`
+      : `<p>Hi ${escape(name)},</p>
+<p>Your mentor reviewed your project for <strong>${escape(courseTitle)}</strong> and asked for a few changes. Open the Project page in your Beyownd classroom to read the feedback and submit a new version.</p>`,
+  });
+  if (error) {
+    logger.error({ err: error, decision }, 'Failed to send review email');
+    throw new AppError(503, 'Could not send email', 'EMAIL_FAILED');
+  }
+};

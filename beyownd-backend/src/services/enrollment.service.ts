@@ -26,6 +26,7 @@ import { isValidObjectId, Types } from 'mongoose';
 import Enrollment, { IEnrollment, IModuleProgress } from '../models/enrollment.model';
 import Course from '../models/course.model';
 import Cohort, { ICohort } from '../models/cohort.model';
+import Credential from '../models/credential.model';
 import { AppError } from '../utils/AppError';
 import { getOutline, getLessonContent, Outline, OutlineModule, LessonContent } from './catalog.service';
 
@@ -224,6 +225,14 @@ export const getDashboard = async (enrollmentId: string, userId: string) => {
   ]);
   const states = computeModuleStates(outline, enrollment);
   const active = ACCESSIBLE_STATUSES.includes(enrollment.status);
+  const completed = enrollment.status === 'completed';
+  const completionDocs = completed
+    ? await Credential.countDocuments({
+        enrollmentId: enrollment._id,
+        type: { $in: ['completion_certificate', 'completion_letter'] },
+        status: { $ne: 'revoked' },
+      })
+    : 0;
 
   return {
     id: String(enrollment._id),
@@ -243,6 +252,12 @@ export const getDashboard = async (enrollmentId: string, userId: string) => {
     modules: states,
     projectStatus: enrollment.projectStatus,
     completedAt: enrollment.completedAt ?? null,
+    // Certificate kab milega - D2: course complete + batch end ke baad
+    completion: {
+      completed,
+      documentsIssued: completionDocs > 0,
+      documentsAvailableFrom: completed ? cohort.endDate : null,
+    },
   };
 };
 

@@ -1,7 +1,7 @@
 # Phase 3 — Payments & Credentials
 
 **Dates:** Oct 18 – , 2026
-**Status:** 🟡 In progress — Part A (payments) ✅ · Part B (credentials) ✅ · Part C (mentor review + completion) next
+**Status:** ✅ Done — Part A (payments) · Part B (credentials) · Part C (mentor review + completion)
 **Interview doc:** [../interview/phase-3-payments-credentials.md](../interview/phase-3-payments-credentials.md)
 **Design followed:** [schemas.md](../design/schemas.md) §5–6 · [api-routes.md](../design/api-routes.md) §6–9 · decisions D2, D5, D7
 
@@ -13,7 +13,7 @@ Money in, trustworthy documents out: a student pays with Razorpay and is enrolle
 | --- | --- | --- |
 | A | Checkout, signature verification, webhooks, idempotent activation, seat race, refunds | ✅ Oct 18 |
 | B | Credential model, PDF worker (BullMQ), offer letter on payment, verify endpoint, my documents | ✅ Oct 18 |
-| C | Mentor review queue + decision, course completion, certificate after batch end | ⏳ |
+| C | Mentor review queue + decision, course completion, certificate after batch end | ✅ Oct 20 |
 
 ---
 
@@ -167,3 +167,58 @@ Documents are written to `beyownd-backend/.tmp/documents/` (gitignored). Put `lo
 [tests/credentials.test.ts](../../beyownd-backend/tests/credentials.test.ts) — 15 tests (4 pure + 4 issuing + 3 download + 3 verify + 1 refund). **Full suite: 129 / 129 passing**, Jest exits cleanly, no leftover test data.
 
 Worker process smoke test: starts, connects to Redis; MongoDB Atlas refused because the dev machine's mobile IP changed (fail-fast worked as designed — add the new IP in Atlas → Network Access).
+
+---
+
+## Part C — Mentor review, course completion, certificates
+
+### What was built
+
+| Area | Files | What it does |
+| --- | --- | --- |
+| Audit log | [models/auditLog.model.ts](../../beyownd-backend/src/models/auditLog.model.ts) | Who did what, when, to which record. **Append-only** — updates are rejected by the model |
+| Review | [services/review.service.ts](../../beyownd-backend/src/services/review.service.ts) | Queue (cursor-paginated, oldest first, no N+1), one submission with rubric + history, decision |
+| Completion | [services/completion.service.ts](../../beyownd-backend/src/services/completion.service.ts) | Mark course complete; schedule / issue certificate + completion letter; hourly sweep |
+| Jobs | [jobs/queue.ts](../../beyownd-backend/src/jobs/queue.ts), [jobs/document.processor.ts](../../beyownd-backend/src/jobs/document.processor.ts), [worker.ts](../../beyownd-backend/src/worker.ts) | New jobs: `issue-completion-documents` (delayed), `send-review-email`, `completion-sweep` (repeatable, hourly) |
+| Routes | [routes/review.routes.ts](../../beyownd-backend/src/routes/review.routes.ts) | `/api/review/*` — `mentor` and `admin` only |
+| Dashboard | [services/enrollment.service.ts](../../beyownd-backend/src/services/enrollment.service.ts) | `completion: { completed, documentsIssued, documentsAvailableFrom }` |
+
+### Review decision
+
+```text
+POST /api/review/submissions/:id/decision { decision, rubricScores[], feedback }
+  rubric check (server): every criterion exactly once, 0..maxScore → totalPercent
+  approved + totalPercent < pass mark → 400 SCORE_BELOW_PASS
+  ── transaction ─────────────────────────────────────────────
+  submission: pending → approved | changes_requested   (conditional: one decision only)
+  enrollment.projectStatus: pending_review → same
+  audit log entry
+  ────────────────────────────────────────────────────────────
+  approved → checkAndCompleteEnrollment()
+  email job → student
+```
+
+### Completion and certificate timing (decision D2)
+
+```text
+complete = all modules complete + project approved  → enrollment: active → completed (once)
+documents = completed + batch end date passed
+   batch already over  → issue certificate + completion letter now
+   batch still running → delayed BullMQ job at endDate (+1 min buffer)
+   safety net          → worker sweep at startup + every hour: completed + ended + documents missing → issue
+   any path, any number of times → issueCredential is idempotent → exactly one of each
+```
+
+`issueCompletionDocuments` re-checks status and end date itself, so even a job that fires early (clock skew, manual run) can never issue a certificate before the batch ends, and a refunded enrollment never gets one.
+
+### Tests
+
+[tests/review.test.ts](../../beyownd-backend/tests/review.test.ts) — 13 tests. **Full suite: 142 / 142 passing**, lint + typecheck clean (`npm run check`).
+
+| Group | What they prove |
+| --- | --- |
+| Rubric (2) | Total computed by the server; missing / unknown / duplicate / out-of-range scores rejected |
+| Access (1) | Students 403, unauthenticated 401, mentors and admins allowed |
+| Queue (2) | Oldest first, student + course shown, cursor pagination, reviewed ones leave the queue; detail shows rubric and earlier versions with feedback |
+| Decision (4) | Changes requested reopens the submission + audit + email; validation and **no approval below the pass mark** (nothing written on rejection); **two mentors at once → one wins**; audit log can't be edited |
+| Completion (4) | Batch over → certificate + letter immediately; batch running → delayed job ~55 days out, early run refused, job runs after end; **sweep recovers a lost job exactly once**; refunded enrollment never gets documents |

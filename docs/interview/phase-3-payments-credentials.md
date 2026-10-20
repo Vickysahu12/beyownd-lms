@@ -1,6 +1,6 @@
 # Interview — Phase 3: Payments & Credentials
 
-**Status:** 🟡 Parts A (payments, 19 tests) and B (credentials, 15 tests) built and tested — 129 total. Mentor review and course completion (Part C) not built yet — don't claim them.
+**Status:** ✅ Parts A (payments, 19 tests), B (credentials, 15 tests) and C (review + completion, 13 tests) built and tested — 142 total.
 
 ## One-line summary (Part A)
 
@@ -79,3 +79,17 @@ A: The verify lookup is by order ID *and* the logged-in user, and the signature 
 - *What if the worker is down?* Payments and enrollment still work; documents wait in the queue (or in 'generating') and are processed when the worker comes back.
 - *Can someone enumerate certificates?* ~850 billion possible IDs per year prefix, the verify endpoint is rate-limited, and it returns no contact details.
 - *How do you revoke?* Refunds revoke automatically; an admin revoke endpoint comes with the admin panel. Revocation invalidates the verify cache immediately.
+
+## Part C — Mentor review and completion (built and tested: 13 tests)
+
+**One line:** mentors score projects against a rubric in a single transaction with an audit trail; approval completes the course, and certificates are issued only after the batch's real end date — through a delayed job with an hourly safety net.
+
+**Story — the certificate can't come early.** "The internship dates on the certificate are real, so even a student who finishes in week 3 gets the certificate after the batch ends. On approval I schedule a delayed BullMQ job for the end date. Delayed jobs live in Redis, but I don't trust a single mechanism for something students pay for, so a sweep runs at worker startup and every hour: completed, batch ended, documents missing → issue. And the issuing function re-checks the end date itself, so even a job that fires early refuses. Issuance is idempotent, so all three paths together still produce exactly one certificate."
+
+**Story — two mentors, one submission.** "The decision is a conditional update — only from `pending` — inside a transaction with the enrollment status and the audit entry. Two mentors clicking approve at the same moment: one gets 200, the other 409. Tested."
+
+**Story — the server computes the score.** "The mentor sends a score per rubric criterion; the server validates each one against the rubric's maximum, rejects missing or unknown criteria, computes the percentage, and refuses an approval below the pass mark — the certificate has to mean the project met the bar."
+
+**Q: Why an audit log?** Review decisions, revocations and refunds affect money and trust. If a student or a college questions a decision, the log answers who did it and when. It's append-only — the model rejects updates.
+
+**Q: Why email through the queue?** The decision must never fail because an email provider is slow; the job retries with backoff.

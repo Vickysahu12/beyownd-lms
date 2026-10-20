@@ -15,7 +15,8 @@ import { Worker } from 'bullmq';
 import { connectDB, disconnectDB } from './config/db';
 import { disconnectRedis } from './config/redis';
 import Credential from './models/credential.model';
-import { DOCUMENTS_QUEUE, createQueueConnection, enqueuePdf, closeQueues } from './jobs/queue';
+import { DOCUMENTS_QUEUE, createQueueConnection, enqueuePdf, closeQueues, scheduleCompletionSweep } from './jobs/queue';
+import { sweepCompletedEnrollments } from './services/completion.service';
 import { processDocumentJob } from './jobs/document.processor';
 import { logger } from './utils/logger';
 
@@ -40,6 +41,10 @@ const start = async () => {
   );
 
   await recoverStuckCredentials();
+  // Completed students jinke certificate miss ho gaye (delayed job kho gaya) -
+  // abhi ek baar, phir har ghante (repeatable job)
+  await sweepCompletedEnrollments();
+  await scheduleCompletionSweep();
   logger.info('Document worker running');
 
   const shutdown = async (signal: string) => {

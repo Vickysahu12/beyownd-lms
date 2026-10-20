@@ -71,7 +71,7 @@ Served from Redis (`cache:courses:published`, `cache:course:<slug>:outline`) —
 | --- | --- | --- | --- |
 | POST | `/enrollments` | onboarded | `{ cohortId }` → creates (or reuses) a `pending_payment` enrollment **and** a Razorpay order → `{ enrollment: { id, status }, checkout: { keyId, orderId, amountPaise, currency, name, description, prefill: { name, email, contact } } }` (pass `checkout` straight to Razorpay Checkout) · `ENROLLMENT_CLOSED`, `COHORT_FULL`, `ALREADY_ENROLLED`, `PAYMENT_PROVIDER_ERROR` |
 | GET | `/enrollments` | auth | My enrollments with course title, cohort dates, status, % complete |
-| GET | `/enrollments/:id` | enrolled | Dashboard for one course: modules with lock/complete state, quiz status, project status, community link |
+| GET | `/enrollments/:id` | enrolled | Dashboard for one course: modules with lock/complete state, quiz status, project status, community link, `completion: { completed, documentsIssued, documentsAvailableFrom }` |
 | GET | `/enrollments/:id/lessons/:lessonId` | enrolled | Lesson content + `completed` + `previousLessonId` / `nextLessonId` · `MODULE_LOCKED`, `ENROLLMENT_NOT_ACTIVE`, `COHORT_NOT_STARTED` |
 | POST | `/enrollments/:id/lessons/:lessonId/complete` | enrolled | Mark done (idempotent) → `{ moduleCompleted, nextModuleUnlocked, percentComplete }` |
 | GET | `/enrollments/:id/modules/:moduleId/quiz` | enrolled | Questions in shuffled order, **without answers**, plus `passed`, `bestScorePercent`, `retryAfterSeconds` · `MODULE_LOCKED`, `LESSONS_INCOMPLETE` |
@@ -105,13 +105,13 @@ Both `/payments/verify` and the webhook run the same idempotent activation (see 
 
 Revoked credentials still verify — they show **status: revoked** with the date, so a revoked certificate can't be passed off as genuine.
 
-## 9. Mentor (Phase 3)
+## 9. Mentor ✅ (Phase 3C)
 
 | Method | Path | Access | Purpose |
 | --- | --- | --- | --- |
-| GET | `/review/submissions?status=pending` | mentor, admin | Review queue, oldest first, with student name, course, repo/live links |
+| GET | `/review/submissions?status=pending&limit=20&cursor=` | mentor, admin | `{ items: [{ id, version, status, submittedAt, repoUrl, liveUrl, student: { name, college }, course: { title }, cohort: { name, code, endDate } }], nextCursor }` — pending oldest first, reviewed newest first |
 | GET | `/review/submissions/:id` | mentor, admin | Submission + rubric + previous versions |
-| POST | `/review/submissions/:id/decision` | mentor, admin | `{ decision: 'approved' \| 'changes_requested', rubricScores, feedback }` → updates enrollment; if all requirements are met, schedules certificate issue (respecting cohort end date) · audit-logged |
+| POST | `/review/submissions/:id/decision` | mentor, admin | `{ decision: 'approved' \| 'changes_requested', rubricScores: [{ criterion, score }], feedback (10–5000) }` → `{ submissionId, decision, totalPercent, completion: 'completed' \| 'already_completed' \| 'not_ready' \| null }` · `RUBRIC_INVALID`, `SCORE_BELOW_PASS`, `SUBMISSION_ALREADY_REVIEWED` · audit-logged, student emailed |
 
 ## 10. Admin (Phase 5)
 

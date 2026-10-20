@@ -29,6 +29,7 @@ import enrollmentRoutes from './routes/enrollment.routes';
 import paymentRoutes from './routes/payment.routes';
 import webhookRoutes from './routes/webhook.routes';
 import { credentialRoutes, verifyRoutes, fileRoutes } from './routes/credential.routes';
+import reviewRoutes from './routes/review.routes';
 
 const app: Application = express();
 
@@ -90,6 +91,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/credentials', credentialRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/review', reviewRoutes);
 
 // ---- 404 + global error handler (HAMESHA sabse aakhir mein) ----
 app.use(notFoundHandler);

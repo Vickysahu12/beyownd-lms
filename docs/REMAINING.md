@@ -49,9 +49,9 @@ Business  [█░░░░░░░░░░░░░░░░░░░]  5%
 | --- | --- | --- | --- | --- |
 | B1 | **CI: GitHub Actions** (lint + typecheck + 129 tests on every push) | ✅ | — | `.github/workflows/ci.yml` — first run on next push. See [phases/ci-quality.md](phases/ci-quality.md) |
 | B2 | **ESLint** setup + fix findings | ✅ | — | 26 findings fixed (incl. invisible Unicode in PDF regex, unhandled promise) |
-| B3 | **Phase 3C — Mentor review:** review queue, approve / request changes, rubric scores | ⏳ | 0.5 day | Mentor role already exists |
-| B4 | **Phase 3C — Course completion:** all modules + project approved → enrollment `completed` | ⏳ | 2 h | |
-| B5 | **Phase 3C — Certificate + completion letter** issued after approval **and** batch end date (D2) — scheduled job | ⏳ | 3 h | Document system already built |
+| B3 | **Phase 3C — Mentor review:** review queue, approve / request changes, rubric scores | ✅ | — | Transaction + audit log + email; frontend can build `/review` now |
+| B4 | **Phase 3C — Course completion:** all modules + project approved → enrollment `completed` | ✅ | — | Dashboard shows `completion` block |
+| B5 | **Phase 3C — Certificate + completion letter** issued after approval **and** batch end date (D2) — scheduled job | ✅ | — | Delayed job + hourly sweep; 142 tests passing |
 | B6 | **Phase 5 — Admin APIs (essentials):** create/edit course, modules, lessons, quizzes; cohorts; students list + search; revoke credential; refund marking; basic stats; audit log | ⏳ | 1–1.5 days | Needed to load Y8 content without the seed script |
 | B7 | **Content import script** (fallback): load a course from a JSON/Markdown file | ⏳ | 2 h | Backup if admin UI isn't ready in time |
 | B8 | **Phase 6 — Docker:** Dockerfile (API + worker), `docker-compose.yml` (api, worker, redis, nginx) | ⏳ | 3 h | Graceful shutdown finally verified on Linux here |
