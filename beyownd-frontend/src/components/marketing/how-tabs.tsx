@@ -31,7 +31,7 @@ const tabs: Tab[] = [
     accent: "Real dates.",
     body: "Every program runs in a batch with a fixed start and end date. Those exact dates are printed on your offer letter and certificate.",
     cta: "See programs",
-    href: "/#programs",
+    href: "/programs",
     panel: <JoinPanel />,
   },
   {
@@ -51,7 +51,7 @@ const tabs: Tab[] = [
     accent: "Module by module.",
     body: "A short quiz at the end of every module. Pass at 60%. Missed it? Review and try again after a one-minute wait.",
     cta: "Quiz rules",
-    href: "/#faq",
+    href: "/faq",
     panel: <QuizPanel />,
   },
   {
@@ -71,7 +71,7 @@ const tabs: Tab[] = [
     accent: "Anyone can verify.",
     body: "After your batch ends and your project is approved, you get a completion certificate and letter, each with a QR code.",
     cta: "Try verifying",
-    href: "/#verify",
+    href: "/verify",
     panel: <CertificatePanel />,
   },
 ];

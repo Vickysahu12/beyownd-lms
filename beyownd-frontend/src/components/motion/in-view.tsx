@@ -17,7 +17,11 @@ export function InView({
   className,
   amount = 0.25,
   as: Tag = "div",
+  id,
+  "aria-labelledby": labelledBy,
 }: {
+  id?: string;
+  "aria-labelledby"?: string;
   children: React.ReactNode;
   className?: string;
   amount?: number;
@@ -43,7 +47,7 @@ export function InView({
   }, [amount]);
 
   return (
-    <Tag ref={ref} className={className}>
+    <Tag ref={ref} id={id} aria-labelledby={labelledBy} className={className}>
       {children}
     </Tag>
   );

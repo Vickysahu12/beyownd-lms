@@ -47,13 +47,16 @@ const students: FLink[] = [
   { label: "Get started", href: links.signup },
   { label: "Log in", href: links.login },
   { label: "Pricing", href: "/#pricing" },
-  { label: "FAQ", href: "/#faq" },
+  { label: "FAQ", href: "/faq" },
+  { label: "For colleges", href: "/for-colleges" },
+  { label: "About", href: "/about" },
 ];
 
 const legal: FLink[] = [
   { label: "Terms & Conditions", href: "/terms" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Refund & Cancellation", href: "/refund-policy" },
+  { label: "Delivery Policy", href: "/delivery-policy" },
   { label: "Contact Us", href: "/contact" },
 ];
 

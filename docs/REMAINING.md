@@ -71,16 +71,16 @@ Business  [█░░░░░░░░░░░░░░░░░░░]  5%
 | --- | --- | --- | --- |
 | F1 | Landing: nav | ✅ | |
 | F2 | Landing: hero | ✅ | |
-| F3 | Landing: problem, how it works, programs, what you get, verify demo, pricing, FAQ, final CTA, footer (GrewDo line) | ✅ | Rebuilt Oct 20 in a monday.com-inspired style (Poppins, white canvas, product boards). Includes "Send to parents". Footer has GrewDo placeholders (Y1/Y5); policy links point to F4 pages (not built yet) |
+| F3 | Landing: problem, how it works, programs, what you get, verify demo, pricing, FAQ, final CTA, footer (GrewDo line) | ✅ | Landing done (monday-inspired). PAGES.md step 1 ✅: 404/error/global-error, sitemap, robots, manifest, OG image, apple icon, root Organization + WebSite JSON-LD, per-page metadata helper |
 | F4 | Policy pages (Terms, Privacy, Refund, Contact) | ⏳ | Needs Y5 text |
 | F5 | App setup: API client, single-flight token refresh, TanStack Query, auth context | ⏳ | BRIEF §10.1 |
 | F6 | Signup / login / OTP / Google / forgot + reset password | ⏳ | APIs ready ✅ |
 | F7 | Onboarding (2 steps, college autocomplete) | ⏳ | APIs ready ✅ |
-| F8 | Program page + free preview + batch picker | ⏳ | APIs ready ✅ |
+| F8 | Program page + free preview + batch picker | 🟡 | Marketing side done: /programs (ItemList), /programs/[slug] (syllabus, batches, sticky mobile enroll, Course + FAQPage + Breadcrumb JSON-LD, per-program OG image), free preview lessons (markdown + sanitize, lite YouTube). App-side batch picker/checkout is F9 |
 | F9 | Checkout (Razorpay Checkout + verify) | ⏳ | APIs ready ✅ |
 | F10 | Dashboard, program dashboard, lesson player | ⏳ | APIs ready ✅ |
 | F11 | Quiz + project submission | ⏳ | APIs ready ✅ |
-| F12 | My documents + public verify page `/verify/:id` | ⏳ | APIs ready ✅ |
+| F12 | My documents + public verify page `/verify/:id` | 🟡 | Public side done: /verify, /verify/[id] (per-request, noindex, valid/revoked/generating/not-found), /for-colleges. "My documents" in the app still to do |
 | F13 | Profile | ⏳ | APIs ready ✅ |
 | F14 | Admin UI (minimal): content editor, cohorts, review queue, students | ⏳ | Needs B3, B6 |
 | F15 | Deploy on Vercel (`beyownd.in` + `classroom.beyownd.in`) | ⏳ | Needs Y3 |

@@ -29,7 +29,7 @@ const items: Item[] = [
   { kind: "link", id: "how-it-works", label: "How it works", href: "/#how-it-works" },
   { kind: "menu", id: "certificates", label: "Certificates", href: "/#certificates" },
   { kind: "link", id: "pricing", label: "Pricing", href: "/#pricing" },
-  { kind: "link", id: "faq", label: "FAQ", href: "/#faq" },
+  { kind: "link", id: "faq", label: "FAQ", href: "/faq" },
 ];
 
 export function NavBar({ courses }: { courses: CourseCard[] }) {

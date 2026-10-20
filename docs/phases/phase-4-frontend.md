@@ -117,6 +117,23 @@ The owner replaced the scrapbook direction with monday.com's style as the refere
 
 Bug found: grids with columns only from `lg` let their implicit mobile column grow to the content's min width, so the page scrolled sideways at 390 px. Fixed with `grid-cols-1` on every such grid.
 
+### Marketing pages and SEO (PAGES.md steps 1-3, Oct 20)
+
+| Route | Rendering | Data | Notes |
+| --- | --- | --- | --- |
+| `(marketing)/layout.tsx` | static | — | Shared nav, footer, skip link for every marketing page |
+| `/programs` | prerendered, cached reads (~10 min) | `GET /courses` | Shared `ProgramCard`, honest empty state, `ItemList` JSON-LD |
+| `/programs/[slug]` | `generateStaticParams` for published programs; params awaited inside `<Suspense>` (Cache Components); unknown slugs render on demand | `GET /courses/:slug`, `/cohorts` | Hero facts, what you'll do, syllabus accordion (free lessons link to preview), final project, what you get, batch cards (open/full/closed, low-seat hint, enroll link to the app), certificate-timing note, FAQ, sticky mobile enroll bar. `Course` (with `hasCourseInstance` per batch, INR offers) + `FAQPage` + `BreadcrumbList`. Per-program `opengraph-image` |
+| `/programs/[slug]/preview/[lessonId]` | same pattern | `GET …/preview/lessons/:id` | `react-markdown` + `rehype-sanitize` (then `rehype-highlight`), never `dangerouslySetInnerHTML`; lite YouTube facade (iframe only after tap, youtube-nocookie); `PREVIEW_NOT_AVAILABLE` → "Enroll to unlock"; prev/next; indexable |
+| `/verify` | static | — | ID form normalises lowercase/spaces/missing dashes, inline error, no layout jump |
+| `/verify/[credentialId]` | **per request** (`cache: "no-store"`) | `GET /verify/:id` | `noindex, nofollow`, generic title, no personal data in metadata, excluded from the sitemap. Valid (check draws), revoked (red, with date), generating, not found (tips + form), API down (neutral). Copy link + print |
+| `/for-colleges` | static | — | What the program is, verify steps + live form, the three documents (illustrations, labelled), issuer GrewDo (placeholders) |
+| 404 / `error` / `global-error` | — | — | Friendly, no stack traces, retry |
+
+SEO files: `sitemap.ts` (static pages + published programs + their free preview lessons; no `/verify/*`, no app), `robots.ts` (allow; `/app/` disallowed; `/verify/*` deliberately crawlable so Google sees its `noindex`), `manifest.ts`, `opengraph-image.tsx`, `apple-icon.tsx`, `icon.svg`. Root layout: `lang="en-IN"`, title template `%s | Beyownd`, `Organization` (parent GrewDo) + `WebSite` JSON-LD. `lib/seo.tsx` gives every page the same title/description/canonical/OG/Twitter block. No ratings or reviews in structured data.
+
+Checked against a local mock of the API (scratchpad only, shapes copied from the backend types): every route returns the right status, canonical and robots tags are correct, sitemap lists the right URLs, pages render at 1440 and 390 px.
+
 ### Earlier landing iterations (superseded)
 
 After two heavy animated versions of the problem section were rejected, the owner set the direction for the whole page: **no heavy animation, one consistent theme, small interactions, good typography.** Every section below follows the same system:
@@ -173,6 +190,7 @@ No image-generation tool was available, so the art is generated SVG (`scripts/*.
 | Heading and falling cards overlapped on phones | Scroll-pinned stage shared one viewport between text and animation | Section redesigned without heavy animation |
 | Verify input collapsed to a thin line on phones | `flex-1` in a column flex container sets the height basis to 0 | `w-full`, and `flex-1` only from `sm` up |
 | Placeholder text failed contrast (2.95:1) | Light grey placeholder on a light input | Darker placeholder (4.98:1) |
+| JSON-LD escape did nothing (found in backend review) | The replacement string was written as `"<"`, which JavaScript reads as `"<"` again, so `</script>` in data could close the tag (XSS) | `serializeJsonLd()` in `lib/seo.tsx` writes a real backslash (`"\u003c"`), also escapes U+2028/2029; `npm run check:jsonld [urls]` checks the rule, the source, and rendered pages |
 
 ## What's next
 

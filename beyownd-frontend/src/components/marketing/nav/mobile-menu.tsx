@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { MorphIcon } from "morphicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -21,7 +22,10 @@ export function MobileMenu({ courses }: { courses: CourseCard[] }) {
   const [open, setOpen] = useState(false);
   const pendingHash = useRef<string | null>(null);
 
-  // Section links close the sheet first; the jump happens in onCloseAutoFocus.
+  const router = useRouter();
+
+  // Links close the sheet first; navigation happens in onCloseAutoFocus, after
+  // the scroll lock is released (a same-page section jump needs that).
   const onSectionClick = (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault();
     pendingHash.current = e.currentTarget.dataset.hash ?? null;
@@ -43,13 +47,17 @@ export function MobileMenu({ courses }: { courses: CourseCard[] }) {
           aria-describedby={undefined}
           className="menu-sheet fixed inset-x-3 top-3 z-50 max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain rounded-[28px] bg-white shadow-[0_24px_64px_-24px_rgb(24_58_90/0.45)] sm:inset-x-4 lg:hidden"
           onCloseAutoFocus={(e) => {
-            // Jump to the section after the scroll lock is released.
-            const hash = pendingHash.current;
-            if (!hash) return;
+            const href = pendingHash.current;
+            if (!href) return;
             pendingHash.current = null;
             e.preventDefault();
-            history.pushState(null, "", hash);
-            document.querySelector(hash)?.scrollIntoView();
+            const target = href.startsWith("/#") && window.location.pathname === "/" ? document.querySelector(href.slice(1)) : null;
+            if (target) {
+              history.pushState(null, "", href.slice(1));
+              target.scrollIntoView();
+            } else {
+              router.push(href);
+            }
           }}
         >
           <Dialog.Title className="sr-only">Menu</Dialog.Title>
@@ -69,7 +77,7 @@ export function MobileMenu({ courses }: { courses: CourseCard[] }) {
                 <li key={item.href} className="menu-item" style={{ "--i": i } as React.CSSProperties}>
                   <a
                     href={item.href}
-                    data-hash={item.href.replace("/", "")}
+                    data-hash={item.href}
                     onClick={onSectionClick}
                     className="group/m flex min-h-[54px] items-center justify-between border-b border-line display text-[28px] text-ink"
                   >
@@ -121,7 +129,7 @@ export function MobileMenu({ courses }: { courses: CourseCard[] }) {
                 size="lg"
                 icon={QrCode01Icon}
                 className="w-full bg-white/80"
-                data-hash="#verify"
+                data-hash={links.verify}
                 onClick={onSectionClick}
               >
                 Verify a certificate
