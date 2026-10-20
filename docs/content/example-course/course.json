@@ -1,0 +1,93 @@
+{
+  "slug": "example-web-foundations",
+  "title": "Web Foundations (Example)",
+  "tagline": "A small example course showing the import format",
+  "description": "This example shows how to write a Beyownd course: modules, lessons in Markdown files, a YouTube video lesson, a quiz per module and a final project with a rubric.",
+  "level": "beginner",
+  "skills": ["HTML", "CSS", "JavaScript"],
+  "durationWeeks": 4,
+  "defaultPricePaise": 59900,
+  "project": {
+    "title": "Job Board",
+    "briefFile": "project.md",
+    "rubric": [
+      { "criterion": "Features work as described", "maxScore": 10 },
+      { "criterion": "Code quality and structure", "maxScore": 10 },
+      { "criterion": "Deployed and works on a phone", "maxScore": 10 }
+    ],
+    "passScorePercent": 60
+  },
+  "modules": [
+    {
+      "title": "How the Web Works",
+      "description": "Requests, responses and the structure of a page.",
+      "isFreePreview": true,
+      "lessons": [
+        { "title": "How the web works", "contentFile": "lessons/m1-01-how-the-web-works.md", "estimatedMinutes": 12 },
+        { "title": "HTML basics", "contentFile": "lessons/m1-02-html-basics.md", "estimatedMinutes": 15 },
+        {
+          "title": "CSS in 20 minutes (video)",
+          "type": "video",
+          "videoYoutubeId": "OEV8gMkCHXQ",
+          "content": "Watch the video, then style the page you made in the previous lesson.",
+          "estimatedMinutes": 20
+        }
+      ],
+      "quiz": {
+        "passPercent": 60,
+        "questions": [
+          {
+            "prompt": "What does the browser send to a server to load a page?",
+            "options": ["An HTTP request", "A CSS file", "An email"],
+            "correctOptionIndexes": [0],
+            "explanation": "The browser sends an HTTP request; the server replies with a response."
+          },
+          {
+            "prompt": "Which language describes the *structure* of a page?",
+            "options": ["CSS", "HTML", "JavaScript"],
+            "correctOptionIndexes": [1],
+            "explanation": "HTML is structure, CSS is style, JavaScript is behaviour."
+          },
+          {
+            "prompt": "Which of these are HTML tags? (select all)",
+            "type": "multiple",
+            "options": ["<p>", "color", "<a>", "margin"],
+            "correctOptionIndexes": [0, 2],
+            "explanation": "`color` and `margin` are CSS properties."
+          }
+        ]
+      }
+    },
+    {
+      "title": "JavaScript Essentials",
+      "description": "Variables, types and functions.",
+      "lessons": [
+        { "title": "Variables and types", "contentFile": "lessons/m2-01-variables.md", "estimatedMinutes": 15 },
+        { "title": "Functions", "contentFile": "lessons/m2-02-functions.md", "estimatedMinutes": 15 }
+      ],
+      "quiz": {
+        "questions": [
+          {
+            "prompt": "Which keyword declares a variable that cannot be reassigned?",
+            "options": ["let", "var", "const"],
+            "correctOptionIndexes": [2],
+            "explanation": "`const` bindings cannot be reassigned."
+          },
+          {
+            "prompt": "What does `greet(\"Ravi\")` return if `greet` returns `Hello ${name}`?",
+            "options": ["\"Hello name\"", "\"Hello Ravi\"", "undefined"],
+            "correctOptionIndexes": [1],
+            "explanation": "The template literal inserts the value of `name`."
+          },
+          {
+            "prompt": "Which are primitive types in JavaScript? (select all)",
+            "type": "multiple",
+            "options": ["string", "array", "boolean", "object"],
+            "correctOptionIndexes": [0, 2],
+            "explanation": "Arrays and objects are not primitives."
+          }
+        ]
+      }
+    }
+  ]
+}

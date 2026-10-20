@@ -113,9 +113,11 @@ Revoked credentials still verify — they show **status: revoked** with the date
 | GET | `/review/submissions/:id` | mentor, admin | Submission + rubric + previous versions |
 | POST | `/review/submissions/:id/decision` | mentor, admin | `{ decision: 'approved' \| 'changes_requested', rubricScores: [{ criterion, score }], feedback (10–5000) }` → `{ submissionId, decision, totalPercent, completion: 'completed' \| 'already_completed' \| 'not_ready' \| null }` · `RUBRIC_INVALID`, `SCORE_BELOW_PASS`, `SUBMISSION_ALREADY_REVIEWED` · audit-logged, student emailed |
 
-## 10. Admin (Phase 5)
+## 10. Admin ✅ (Phase 5)
 
-All routes: `admin` only. Every change that affects money or trust writes to `auditlogs`.
+All routes: `admin` only. Every change that affects money or trust writes to `auditlogs`. Responses: `{ success, ... }`; list endpoints with `limit` + `cursor` return `{ items, nextCursor }`.
+
+Built exactly as listed below, plus: `GET /admin/courses/:id` returns the editor structure (modules → lessons, quiz summary, `hasStudents`); `GET /admin/lessons/:id`, `GET/DELETE /admin/modules/:id/quiz`; `PATCH /admin/users/:id/role { role }` (ends that user's sessions; can't change your own). Error codes: `SLUG_TAKEN`, `COURSE_INCOMPLETE`, `COURSE_HAS_STUDENTS`, `REORDER_INVALID`, `CODE_TAKEN`, `CAPACITY_BELOW_SEATS`, `NO_PAID_PAYMENT`, `ALREADY_REVOKED`, `CANNOT_CHANGE_OWN_ROLE`. Bulk content load: `npm run import:course` ([content/COURSE_FORMAT.md](../content/COURSE_FORMAT.md)).
 
 **Content**
 

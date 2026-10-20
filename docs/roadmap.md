@@ -31,7 +31,7 @@ Anything not on that path (leaderboard, streaks, Judge0, comments) is **not a la
 | 2 ✅ | Assessment (backend) | Oct 18 | Quizzes, auto-grading, progress, project submission |
 | 3 ✅ | Payments & credentials (backend) | Oct 18 – 20 | Razorpay, offer letter, mentor review, certificate + letter PDFs (BullMQ), verify API |
 | 4 | Frontend (Next.js) | Oct 18 – Nov 1 (parallel) | Landing, auth, dashboard, course player, quiz, payment, verify page |
-| 5 | Admin panel | Oct 28 – Nov 1 | Content CRUD, review queue, students, revoke |
+| 5 🟡 | Admin panel (backend ✅ Oct 20, UI pending) | Oct 28 – Nov 1 | Content CRUD, review queue, students, revoke |
 | 6 | Production readiness | Nov 1 – 4 | Docker, deploy, Sentry, backups, load test (1000 users), security pass |
 | 7 | Beta & launch | Nov 4 – 7 | Real content loaded, 10–20 student beta, fixes, go-live Nov 6 |
 | 8 | Post-launch | after Diwali | Leaderboard, streaks, Judge0, comments, emails, portfolio |

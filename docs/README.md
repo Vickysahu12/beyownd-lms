@@ -7,6 +7,7 @@
 | Doc | What it is |
 | --- | --- |
 | [REMAINING.md](REMAINING.md) | **Every task left until launch** — owner, status, estimate, timeline, risks |
+| [content/COURSE_FORMAT.md](content/COURSE_FORMAT.md) | **How to write a course** (folder + Markdown) and load it with one command |
 | [business-model.md](business-model.md) | What we sell (₹599–799 virtual internship program), why the credentials must be earned, pre-launch checklist |
 | [roadmap.md](roadmap.md) | Phases 0–8 with dates to the Diwali launch, cut line |
 | [scalability.md](scalability.md) | How we handle the first 1,000 users and how we prove it |

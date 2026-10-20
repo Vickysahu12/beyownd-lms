@@ -37,7 +37,7 @@ Business  [█░░░░░░░░░░░░░░░░░░░]  5%
 | Y5 | **Policy texts:** Terms, Privacy, Refund & Cancellation, Contact (legal party: GrewDo) | ⏳ 🟡 | Razorpay requires them; footer links to them | Oct 26 |
 | Y6 | **Letter details:** GrewDo registration no., address, signatory name, `logo.png`, `signature.png` | ⏳ 🟡 | Placeholders print on PDFs until then | Oct 30 |
 | Y7 | **Ask 2–3 college TPOs** what internship letter format they accept | ⏳ 🟡 | We match the PDF templates to it | Oct 24 |
-| Y8 | **Real course content** for at least 1 program: 3–5 modules, 15–25 lessons, 1 quiz per module (5–10 questions), final project brief + rubric | ⏳ 🔴 | **Students pay for this.** Several days of writing — do it in Google Docs/Notion in parallel | Nov 1 |
+| Y8 | **Real course content** (write it in the [import format](content/COURSE_FORMAT.md) — copy [example-course/](content/example-course/)) for at least 1 program: 3–5 modules, 15–25 lessons, 1 quiz per module (5–10 questions), final project brief + rubric | ⏳ 🔴 | **Students pay for this.** Several days of writing — do it in Google Docs/Notion in parallel | Nov 1 |
 | Y9 | **Decide batch dates + price** for the first batch (use onboarding "certificate needed by" answers) | ⏳ 🟡 | Needed to create the first cohort | Oct 30 |
 | Y10 | **Illustrations** for the landing page (clouds, sun, plane/balloon, certificate) — own or licensed | 🟡 | Frontend uses placeholders until then | Oct 25 |
 | Y11 | **Beta testers:** line up 10–20 students from your community | ⏳ 🟡 | Beta runs Nov 4–5 | Nov 1 |
@@ -52,8 +52,8 @@ Business  [█░░░░░░░░░░░░░░░░░░░]  5%
 | B3 | **Phase 3C — Mentor review:** review queue, approve / request changes, rubric scores | ✅ | — | Transaction + audit log + email; frontend can build `/review` now |
 | B4 | **Phase 3C — Course completion:** all modules + project approved → enrollment `completed` | ✅ | — | Dashboard shows `completion` block |
 | B5 | **Phase 3C — Certificate + completion letter** issued after approval **and** batch end date (D2) — scheduled job | ✅ | — | Delayed job + hourly sweep; 142 tests passing |
-| B6 | **Phase 5 — Admin APIs (essentials):** create/edit course, modules, lessons, quizzes; cohorts; students list + search; revoke credential; refund marking; basic stats; audit log | ⏳ | 1–1.5 days | Needed to load Y8 content without the seed script |
-| B7 | **Content import script** (fallback): load a course from a JSON/Markdown file | ⏳ | 2 h | Backup if admin UI isn't ready in time |
+| B6 | **Phase 5 — Admin APIs (essentials):** create/edit course, modules, lessons, quizzes; cohorts; students list + search; revoke credential; refund marking; basic stats; audit log | ✅ | — | `/api/admin/*` + `make-admin` script. See [phases/phase-5-admin.md](phases/phase-5-admin.md) |
+| B7 | **Content import script** (fallback): load a course from a JSON/Markdown file | ✅ | — | `npm run import:course`. **Owner: write Y8 in this format → [content/COURSE_FORMAT.md](content/COURSE_FORMAT.md)** |
 | B8 | **Phase 6 — Docker:** Dockerfile (API + worker), `docker-compose.yml` (api, worker, redis, nginx) | ⏳ | 3 h | Graceful shutdown finally verified on Linux here |
 | B9 | **Phase 6 — Cloudflare R2** storage (swap `storage.util.ts`) | ⏳ | 2 h | Needs a Cloudflare account (🙋) |
 | B10 | **Phase 6 — Deploy:** VPS + Nginx + HTTPS for `api.beyownd.in`; separate **production** Atlas database; Razorpay webhook URL; production `.env` | ⏳ | 0.5 day | Needs Y3 + a VPS (🙋 buys it) |
