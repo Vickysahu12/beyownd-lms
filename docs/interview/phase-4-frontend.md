@@ -1,6 +1,6 @@
 # Interview — Phase 4: Frontend (Next.js)
 
-**Status:** 🟡 Landing page built. The student app isn't built yet, so don't claim it. Lighthouse and bundle numbers aren't measured yet, so don't quote any.
+**Status:** 🟡 Landing, marketing/SEO pages, the whole student app (auth, onboarding, checkout, learning, quiz, project, documents, profile), mentor review and admin are built. Everything was clicked through against a mock API with the backend's real error codes, not yet against the real backend, a real Google client ID or Razorpay test mode, so say exactly that. No Lighthouse numbers yet.
 
 ## One-line summary
 
@@ -30,7 +30,26 @@ The product sells trust to anxious final-year students and their parents. So the
 
 **9. Product as the hero, honestly.** "Following monday.com's pattern, the landing shows the product itself: classroom boards built in real HTML with status pills, not screenshots. Every board is labelled 'Sample data', and where monday shows customer logos we show what each internship includes, because we have no partner logos and inventing them would undercut the whole trust pitch."
 
+**10. Token refresh without a stampede.** "The access token lives only in memory, so a page reload or XSS can't read it from storage. When it expires, five queries might fail at once. If each one refreshed on its own, the refresh-token rotation would treat the second refresh as reuse and log the user out. So `refreshSession()` keeps one shared promise: the first failure starts the refresh, the others wait on the same promise, then each retries once."
+
+**11. Destructive admin actions.** "Refund, revoke and role change can't be undone and affect a real student's documents. Every one goes through the same confirm dialog, which names the consequence ('the verify page will show this as revoked to everyone'). Where the API logs a reason, the dialog requires one before the button enables. If the API refuses, say `NO_PAID_PAYMENT`, the error appears inside the dialog with a plain explanation, mapped from the error code, not the message text."
+
+**12. Reorder without a library.** "Admins reorder modules and lessons. Instead of adding a drag-and-drop package, I used native HTML drag events plus up/down buttons. The buttons matter: native drag doesn't work on touch or with a keyboard, and the buttons give both, with an `aria-live` line announcing the new position. The new order shows immediately and is sent as one request; if it fails, the list snaps back."
+
+**13. Payment status that never lies.** "After Razorpay closes, the browser calls verify. If verify can't confirm (signature mismatch, network), the money may still have moved, and the backend's webhook will activate the enrollment. So the status page never says 'failed' there: it says 'Confirming your payment, don't pay again' and polls the enrollments list for 90 seconds, then tells the student it can take a few minutes. The worst UX bug in payments is a student paying twice."
+
+**14. A logo that vanished on phones.** "On mobile the header logo was blank. The SVG used fixed gradient ids, and the page had two logos: one in the desktop sidebar, hidden with display:none on phones, and one in the mobile header. Both pointed at the first gradient, and a gradient inside a display:none subtree doesn't paint. Fix: `useId()` per instance. It was also a latent bug on the marketing pages, which have a logo in both nav and footer."
+
+**15. One app, two hosts.** "beyownd.in and classroom.beyownd.in are one Next.js project. `proxy.ts` rewrites `classroom…/dashboard` to the `/app/dashboard` route, and each host redirects paths that belong to the other. Locally it's one origin with an `/app` prefix, so the proxy is a no-op and every link goes through one `CLASSROOM_URL` constant. Testing it surfaced a second bug: links were absolute in production, but `usePathname()` returns only the path, so the active tab never highlighted."
+
+**16. Not inventing facts.** "While writing copy I caught myself promising things the system doesn't do: 'refunds in 5-7 days', 'money is returned automatically', 'access for the batch duration'. I checked each against the backend and removed them. Legal pages show a clearly marked placeholder, are noindex and stay out of the sitemap until the owner's text arrives, controlled by one list in `lib/legal.ts`."
+
 ## Decisions & trade-offs
+
+- **Client-rendered app behind login, server-rendered marketing**: app pages need the in-memory token and aren't indexed anyway, so there's nothing to gain from server rendering them.
+- **Razorpay and Google scripts load on demand** (Pay button, auth pages), not on every page.
+- **OTP email in sessionStorage, not the URL**, so it doesn't land in history or logs; pages still work without it.
+- **Error handling by `code`**: messages can change wording; codes are the contract with the backend.
 
 - **CSS-first motion, `motion` only where needed**, loaded through `LazyMotion` with the smaller `domAnimation` feature set to keep JavaScript down.
 - **Generated SVG art** instead of images: no image tool was available, the files are a few KB, and they're swappable for commissioned art later.

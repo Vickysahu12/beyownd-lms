@@ -5,6 +5,12 @@
  */
 export const CLASSROOM_URL = process.env.NEXT_PUBLIC_CLASSROOM_URL ?? "/app";
 
+/**
+ * Marketing pages as linked from the app. Empty in local dev (same origin);
+ * https://beyownd.in in production, where the app is on another host.
+ */
+export const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL ?? "";
+
 /** Public marketing origin, used for canonical URLs, sitemap and JSON-LD. */
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://beyownd.in";
 

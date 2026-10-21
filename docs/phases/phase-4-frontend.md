@@ -134,6 +134,64 @@ SEO files: `sitemap.ts` (static pages + published programs + their free preview 
 
 Checked against a local mock of the API (scratchpad only, shapes copied from the backend types): every route returns the right status, canonical and robots tags are correct, sitemap lists the right URLs, pages render at 1440 and 390 px.
 
+### Student app foundation, mentor review and admin (F5, F14, Oct 21)
+
+Everything under `/app` is client-rendered behind login, and the whole tree is `noindex` (in `app/(app)/app/layout.tsx`) and disallowed in robots.
+
+**Foundation** (`lib/api.ts`, `components/app/*`)
+
+- `api<T>(path, opts)` adds the bearer token, sends `credentials: "include"` only to `/auth/*` (the refresh cookie lives on path `/api/auth`), and throws `ApiError(status, code, message, errors, details)`. UI branches on `code`, never on message text. `fieldErrors()` maps the API's `VALIDATION_ERROR` list to form fields, so admins see the server's exact reason.
+- Access token in memory only. On `TOKEN_EXPIRED` one shared refresh promise runs (single-flight) and the request is retried once; parallel requests wait for the same refresh.
+- `AuthProvider` refreshes on load, exposes `{ user, status, login, logout }`. `RequireRole` reads `user.role` and sends logged-out users to `/app/login?next=…` (same-origin paths only).
+- Shared UI: `Field` (label, hint, error wired with `aria-describedby`), inputs, `Button` with loading, `ConfirmDialog` (optional reason field, min 5 characters, shows the API error inside the dialog), toasts, `StatusPill`, `ReorderList`, `MarkdownField`.
+
+**Mentor review** (`/app/review`, `/app/review/[submissionId]`, mentor or admin)
+
+Queue tabs (pending / in review / done) with cursor "Load more". Detail: repo and live links, rubric with a score per criterion, live total against the pass mark, feedback required; approve and "request changes" both go through a confirm dialog. Error codes such as already-reviewed or claimed by another mentor get their own message.
+
+**Admin** (`/app/admin/*`, admin only)
+
+| Page | What it does |
+| --- | --- |
+| Overview | Stat tiles, alerts (stuck PDFs, refunds needed), per-course funnel, colleges |
+| Courses list / new / edit | Draft → publish → archive (confirm). Modules and lessons reorder by drag or keyboard up/down, sent as one request, rolled back on failure. Free-preview toggle, quiz link per module |
+| Lesson editor | Markdown with live preview rendered by the same sanitized renderer students see; YouTube ID pulled from any pasted link; warns before leaving with unsaved changes |
+| Quiz editor | 3-30 questions, single/multiple choice, pass mark; the same rules as the API are checked before Save so the button explains what is wrong |
+| Batches | Create/edit in a dialog; dates entered as IST calendar days; price change flagged as audit-logged; `CODE_TAKEN`, `CAPACITY_BELOW_SEATS` explained |
+| Students list | Search (300 ms debounce) by name/email/college, batch and status filters, cursor pagination |
+| Student detail | Profile, enrollments, documents, payments, submissions. **Mark refunded** (reason, after refunding in Razorpay; revokes documents), **Revoke document** (reason), **Reissue documents**, **Change role** (logs the user out; own role cannot be changed). Each behind a confirm dialog; `NO_PAID_PAYMENT`, `ALREADY_REVOKED`, `CANNOT_CHANGE_OWN_ROLE` get plain messages |
+
+No new dependencies for reorder: native drag-and-drop plus buttons, which also cover touch and screen readers (an `aria-live` line announces the new position).
+
+**Checked:** `tsc --noEmit` and `eslint` clean. **Not checked yet:** clicking through these pages against the real backend.
+
+### Student app: auth, onboarding, checkout, learning, documents (F6-F13, Oct 21)
+
+All under `app/(app)/app/`. Auth pages are public; the `(student)` route group's layout wraps everything else in `StudentShell` = `RequireRole onboarding` (logged out → `/login?next=…`, not onboarded → `/onboarding?next=…`).
+
+| Route | What it does | Codes handled |
+| --- | --- | --- |
+| `/signup` | Name, email, password with live rule checklist (same rules as the validator), Google | `EMAIL_TAKEN`, `GOOGLE_ACCOUNT`, `VALIDATION_ERROR` per field |
+| `/verify-email` | 6 OTP boxes: paste, autofill, auto-submit on the 6th digit; 60 s resend countdown. Email kept in sessionStorage, not the URL | `OTP_INVALID`, `OTP_LOCKED`, `OTP_COOLDOWN` |
+| `/login` | Email + password or Google; forgot link; `?next=` kept to signup | `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFIED` (resends a code, opens the OTP screen), `USE_GOOGLE_SIGNIN`, `RATE_LIMITED` |
+| `/forgot-password`, `/reset-password` | Same message whether or not the account exists; reset logs out other devices | `OTP_*` |
+| `/onboarding` | 2 steps, progress bar, draft in localStorage, college combobox (debounced `GET /colleges`), choice cards and chips | API `errors[]` mapped to fields and the right step; `ALREADY_ONBOARDED` |
+| `/dashboard` | Programs with progress and the right action (Start / Continue / Complete payment), documents summary, empty state | — |
+| `/enroll/[slug]/[cohortId]` | Summary → `POST /enrollments` → Razorpay Checkout (script loaded on Pay) → `POST /payments/verify` | `ENROLLMENT_CLOSED`, `COHORT_FULL`, `ALREADY_ENROLLED`, `PAYMENT_PROVIDER_ERROR`, dismissed / failed payment |
+| `…/status` | Success, `cohort_full_refund_required`, or "Confirming…" polling `GET /enrollments` for 90 s when verify couldn't confirm (the webhook activates it). Never says "failed" after money may have moved | `PAYMENT_SIGNATURE_INVALID` |
+| `/learn/[id]` | Modules (locked / open / done, lessons, quiz row), batch-not-started banner, progress, project card, certificate timing (`completion.documentsAvailableFrom`), community link | `ENROLLMENT_NOT_ACTIVE` states |
+| `…/lessons/[lessonId]` | Sanitized markdown, lite YouTube, Mark complete (toast with %), "module unlocked" moment (< 1 s, CSS, off with reduced motion), quiz CTA, prev/next | `MODULE_LOCKED`, `COHORT_NOT_STARTED` |
+| `…/modules/[moduleId]/quiz` | Intro (pass mark, best score, attempts), one question per screen, fail → right/wrong only + countdown, pass → answers + explanations + unlock | `QUIZ_COOLDOWN` (`details.retryAfterSeconds`), `LESSONS_INCOMPLETE` |
+| `…/project` | Brief + rubric, locked until all modules, GitHub-only repo check, submission timeline with mentor scores and feedback | `SUBMISSION_PENDING`, `MODULES_INCOMPLETE`, `PROJECT_ALREADY_APPROVED` |
+| `/documents` | Status chips, download = fresh signed link each time, copy verify link, polls while generating | `CREDENTIAL_NOT_READY`, `CREDENTIAL_REVOKED` |
+| `/payments`, `/profile` | Paid/refunded history; profile PATCH sends only changed fields, certificate name read-only when locked | `CERTIFICATE_NAME_LOCKED` |
+
+**Host routing** (`src/proxy.ts`): on `classroom.beyownd.in`, `/dashboard` is rewritten to `/app/dashboard`; `/` → `/dashboard`; `/app/*` → clean URL; non-app paths → marketing host. On `beyownd.in`, `/app/*` → classroom host. When `NEXT_PUBLIC_CLASSROOM_URL` is relative (`/app`, local dev) it does nothing. Production envs: `NEXT_PUBLIC_CLASSROOM_URL=https://classroom.beyownd.in`, `NEXT_PUBLIC_MARKETING_URL=https://beyownd.in`.
+
+**Marketing pages (PAGES.md step 4):** `/about`, `/faq` (grouped, `FAQPage` JSON-LD; landing FAQ reads the same `lib/faq-data.ts`), `/contact`, `/delivery-policy` (facts of digital delivery), and `/terms`, `/privacy`, `/refund-policy` as clearly marked placeholders. `lib/legal.ts` `LEGAL_DRAFTS` makes drafts `noindex` and drops them from the sitemap; remove a path from it when the owner's text is in.
+
+**How it was checked:** a mock API (scratchpad, shapes and error codes copied from the backend services, including locking, cooldowns and the cookie refresh) and Playwright scripts that click through every flow at 390 px and 1440 px: signup → OTP → onboarding → checkout (stubbed Razorpay: dismiss, fail, success) → status → lessons → quiz fail with cooldown → quiz pass with unlock → project submit → documents download → profile save; plus a production build with real host names (`classroom.localhost`) tested with curl and a browser. No page errors, no horizontal scroll at 390 px. **Not checked yet:** the real backend, a real Google client ID, Razorpay test mode.
+
 ### Earlier landing iterations (superseded)
 
 After two heavy animated versions of the problem section were rejected, the owner set the direction for the whole page: **no heavy animation, one consistent theme, small interactions, good typography.** Every section below follows the same system:
@@ -191,7 +249,15 @@ No image-generation tool was available, so the art is generated SVG (`scripts/*.
 | Verify input collapsed to a thin line on phones | `flex-1` in a column flex container sets the height basis to 0 | `w-full`, and `flex-1` only from `sm` up |
 | Placeholder text failed contrast (2.95:1) | Light grey placeholder on a light input | Darker placeholder (4.98:1) |
 | JSON-LD escape did nothing (found in backend review) | The replacement string was written as `"<"`, which JavaScript reads as `"<"` again, so `</script>` in data could close the tag (XSS) | `serializeJsonLd()` in `lib/seo.tsx` writes a real backslash (`"\u003c"`), also escapes U+2028/2029; `npm run check:jsonld [urls]` checks the rule, the source, and rendered pages |
+| `next build` failed on `/app/admin/courses/[courseId]` (dev worked) | With Cache Components, `usePathname()` in the role guard ran outside any `<Suspense>`, which blocks prerendering of dynamic routes | One `<Suspense>` with a skeleton in `app/(app)/app/layout.tsx`; app routes now partially prerender. Lesson: run `next build`, not only `tsc`/lint |
+| Mobile header logo rendered blank | Gradient ids in the logo SVG were fixed (`by-navy`), so the second logo on a page used the first one's gradients, which sat in the desktop sidebar (`display:none` on phones) | `useId()` per logo instance |
+| Nav tab never highlighted in production | Links are absolute (`https://classroom…/dashboard`) but `usePathname()` returns `/dashboard` | Compare paths only |
+| Payment / refund copy promised things the system doesn't do ("returned automatically", "5-7 days", "access for the batch duration") | Written from assumption | Reworded to what the backend actually does; timelines left to the policy text |
 
 ## What's next
 
-Landing (F3): how it works → programs → deadline planner (owner-approved extra) → what you get → verify demo → pricing (+ "send to parents" share, owner-approved extra) → FAQ → final CTA → footer with the GrewDo line. Then F4 policy pages and the app (F5 onward).
+1. Click through the whole app against the real backend (needs Redis running) and a Razorpay test-mode payment.
+2. Real Google client ID + authorised origins, then test Google sign-in end to end.
+3. Owner text for Terms, Privacy, Refund (Y5) and contact details (Y6); then remove the paths from `LEGAL_DRAFTS`.
+4. Deploy (F15) with the production envs above.
+5. Step 10: performance and accessibility pass (F16) with real Lighthouse numbers.

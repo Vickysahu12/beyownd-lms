@@ -369,3 +369,28 @@ body {
 .hljs-number, .hljs-literal { color: #ffcf8a; }
 .hljs-comment { color: #7f86a3; font-style: italic; }
 .hljs-title, .hljs-name, .hljs-tag { color: #8ec8ff; }
+
+/* App dialogs: centred modal, scales from 0.96 (modals stay centred, not origin-aware) */
+@keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes dialog-out { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) scale(0.97); } }
+.dialog-pop[data-state="open"] { animation: dialog-in 220ms var(--ease-out); }
+.dialog-pop[data-state="closed"] { animation: dialog-out 160ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .dialog-pop[data-state="open"] { animation: fade-in 150ms ease; }
+  .dialog-pop[data-state="closed"] { animation: fade-out 120ms ease; }
+}
+
+/* Drag-reorder rows */
+.drag-row[data-dragging="true"] { opacity: 0.45; }
+.drag-row[data-over="true"] { box-shadow: inset 0 2px 0 var(--brand); }
+
+/* Module-unlocked moment (lesson + quiz): one short pop, icon wiggles once. Under 1 s. */
+@keyframes unlock-pop { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes unlock-wiggle { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-12deg) scale(1.08); } 60% { transform: rotate(8deg); } }
+.unlock-pop { animation: unlock-pop 320ms var(--ease-out) both; }
+.unlock-pop .unlock-icon { animation: unlock-wiggle 520ms var(--ease-out) 180ms both; }
+@media (prefers-reduced-motion: reduce) {
+  .unlock-pop, .unlock-pop .unlock-icon { animation: none; }
+}
+.prose-lesson > :first-child { margin-top: 0; }
+.prose-lesson > :last-child { margin-bottom: 0; }

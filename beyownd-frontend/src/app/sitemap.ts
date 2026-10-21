@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 import { freePreviewLessons } from "@/lib/catalog";
 import { getCourse, getPublishedCourses } from "@/lib/catalog.server";
+import { LEGAL_DRAFTS } from "@/lib/legal";
 import { SITE_URL } from "@/lib/site";
 
-/* Every indexable marketing URL. Excludes /verify/* (personal data) and the whole app. */
-const staticPages = ["/", "/programs", "/for-colleges", "/verify", "/about", "/faq", "/contact", "/terms", "/privacy", "/refund-policy", "/delivery-policy"];
+/* Every indexable marketing URL. Excludes /verify/* (personal data), the whole app, and policy drafts. */
+const staticPages = ["/", "/programs", "/for-colleges", "/verify", "/about", "/faq", "/contact", "/terms", "/privacy", "/refund-policy", "/delivery-policy"].filter((p) => !LEGAL_DRAFTS.has(p));
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const courses = await getPublishedCourses();
