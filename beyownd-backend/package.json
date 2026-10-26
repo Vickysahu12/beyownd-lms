@@ -18,7 +18,8 @@
     "lint:fix": "eslint . --fix",
     "check": "npm run lint && npm run typecheck && npm test",
     "import:course": "ts-node --transpile-only scripts/content/import-course.ts",
-    "make-admin": "ts-node --transpile-only scripts/admin/make-admin.ts"
+    "make-admin": "ts-node --transpile-only scripts/admin/make-admin.ts",
+    "check:lesson": "ts-node --transpile-only scripts/content/check-lesson.ts"
   },
   "keywords": [],
   "author": "",

@@ -1,7 +1,8 @@
 # How to Write a Beyownd Course
 
 **For:** you (the owner), writing real course content (task **Y8** in [../REMAINING.md](../REMAINING.md)).
-**Working example:** [example-course/](example-course/) — copy this folder and edit it.
+**Working examples:** [example-course/](example-course/) (small, plain Markdown) · [redis-course/](redis-course/) (full rich course: sections, quizzes, steps, callouts, a widget).
+**Lesson notes format:** [LESSON_FORMAT.md](LESSON_FORMAT.md) — every block, rule and limit.
 
 You write the course as **one folder**: a `course.json` file for the structure, and normal **Markdown files** for the lesson notes and the project brief. One command loads it into the website. You can run the command again any time after fixing something — it updates the course, it never creates duplicates.
 
@@ -13,11 +14,16 @@ You write the course as **one folder**: a `course.json` file for the structure, 
 my-course/
 ├── course.json          ← structure: title, price, modules, lessons, quizzes, project
 ├── project.md           ← final project brief
-└── lessons/
-    ├── m1-01-intro.md   ← one Markdown file per text lesson
-    ├── m1-02-....md
-    └── m2-01-....md
+├── lessons/
+│   ├── m1-01-intro.md   ← one Markdown file per text lesson
+│   ├── m1-02-....md
+│   └── m2-01-....md
+└── assets/              ← images + interactive widgets used by lessons (optional)
+    ├── cache-flow.png
+    └── ttl-lab.html
 ```
+
+In a lesson, assets are always written from the course folder: `![Flow](assets/cache-flow.png)` — never `../assets/…`.
 
 Name lesson files any way you like; the order comes from `course.json`, not from the file names. `m1-01-…` (module 1, lesson 1) just keeps the folder tidy.
 
@@ -81,39 +87,26 @@ Name lesson files any way you like; the order comes from `course.json`, not from
 | `questions[].explanation` | Shown only **after the student passes** — explain why the answer is right |
 | `questions[].points` | 1–10, default 1 (harder questions can be worth more) |
 
-## 3. Writing lessons in Markdown
+## 3. Writing lessons
 
-Markdown is plain text with simple marks — VS Code shows a live preview (`Ctrl+Shift+V`).
+Lessons are Markdown plus a few blocks (quiz, steps, callout, details, interactive). **The full format is in [LESSON_FORMAT.md](LESSON_FORMAT.md)** — read §1 (a one-screen cheat sheet) once.
 
-````markdown
-# Lesson title
+The three rules people break most:
+- **No `# ` heading** — the lesson title is shown automatically. Use `## ` for sections (they become the sidebar).
+- Practice quizzes in the notes must **not copy** a question from the graded module quiz in `course.json` (the import refuses it).
+- Raw HTML isn't shown — use Markdown and blocks.
 
-Normal paragraph. **Bold**, *italic*, `inline code`.
+Check lessons while you write (no database needed):
 
-## A sub-heading
-
-- bullet one
-- bullet two
-
-1. step one
-2. step two
-
-```js
-// code block - students get syntax highlighting
-const greeting = "Hello";
+```bash
+npm run check:lesson -- ../docs/content/my-course/lessons/*.md
 ```
 
-> A tip box (quote).
-
-[A link](https://developer.mozilla.org)
-````
-
 **Tips that work for our students**
-- Short lessons (10–20 minutes). One idea per lesson.
+- Short lessons (10–20 minutes). One idea per section; a practice quiz every section or two.
 - Simple English, short sentences. Explain every new word the first time.
-- Show code, then explain it line by line.
+- Show code, then explain it line by line. Give code blocks a file name: ````js title="routes/posts.js"````.
 - End text lessons with a small **"Try it"** task.
-- Raw HTML in Markdown is removed for security — use Markdown only.
 
 ## 4. Load it into the website
 
@@ -131,7 +124,8 @@ npm run import:course -- ../docs/content/my-course/course.json --publish
 ```
 
 - It imports into whichever database `MONGO_URI` in `.env` points to — check before running.
-- Errors name the exact place, e.g. `module 2 ("JavaScript Essentials"), lesson 3: file "lessons/m2-03.md" not found`.
+- Errors name the exact place, and **all of them are listed at once**, e.g. `module 2 ("JavaScript Essentials"), lesson 3 ("Loops") - lessons/m2-03.md line 14: Quiz has no correct option - mark at least one with [x]`. Warnings (things worth fixing that don't block the import) are listed too.
+- Images and widgets in `assets/` are checked (real file type, size, safety) and uploaded by the import itself.
 - **Running it again** updates everything to match the folder. Lessons/modules you deleted from the file are removed — **unless students are already enrolled**, in which case it refuses (content can't vanish mid-batch). Edit those through the admin panel instead.
 - After importing, create a **batch** (dates, price, seats) in the admin panel before students can enroll.
 
@@ -143,5 +137,7 @@ npm run import:course -- ../docs/content/my-course/course.json --publish
 - [ ] Project brief says exactly what to build and how to submit
 - [ ] Rubric criteria are clear enough for a mentor to score
 - [ ] Videos are set to Unlisted / Public, not Private
+- [ ] `npm run check:lesson` shows no errors, and warnings are fixed or on purpose
+- [ ] Images are under 400 KB and have alt text
 - [ ] `--dry-run` says **Valid ✓**
 - [ ] Read through the course on the website as a student before publishing

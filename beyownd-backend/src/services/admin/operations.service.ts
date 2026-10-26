@@ -249,7 +249,7 @@ export const revokeCredential = async (actorId: string, rawId: string, reason: s
   const updated = await Credential.findOneAndUpdate(
     { credentialId, status: { $ne: 'revoked' } },
     { $set: { status: 'revoked', revokedAt: new Date(), revokedReason: reason, revokedBy: new Types.ObjectId(actorId) } },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!updated) {
     if (await Credential.exists({ credentialId })) throw AppError.conflict('This document is already revoked', 'ALREADY_REVOKED');

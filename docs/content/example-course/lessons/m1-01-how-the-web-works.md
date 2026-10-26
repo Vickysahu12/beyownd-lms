@@ -1,5 +1,3 @@
-# How the web works
-
 When you open a website, your browser sends an **HTTP request** to a server.
 The server sends back an **HTTP response** — usually HTML, CSS and JavaScript.
 

@@ -7,6 +7,7 @@ import { matchedData } from 'express-validator';
 import * as content from '../services/admin/content.service';
 import * as ops from '../services/admin/operations.service';
 import * as stats from '../services/admin/stats.service';
+import { checkStoredLesson } from '../services/content/lessonContent.service';
 
 type IdParams = { id: string };
 
@@ -59,7 +60,7 @@ export const deleteModule = async (req: Request<IdParams>, res: Response) => {
   res.json({ success: true });
 };
 export const addLesson = async (req: Request<IdParams>, res: Response) => {
-  res.status(201).json({ success: true, lesson: await content.addLesson(req.params.id, body(req)) });
+  res.status(201).json({ success: true, ...(await content.addLesson(req.params.id, body(req))) });
 };
 export const reorderLessons = async (req: Request<IdParams>, res: Response) => {
   await content.reorderLessons(req.params.id, body<{ lessonIds: string[] }>(req).lessonIds);
@@ -69,7 +70,12 @@ export const getLesson = async (req: Request<IdParams>, res: Response) => {
   res.json({ success: true, lesson: await content.getLesson(req.params.id) });
 };
 export const updateLesson = async (req: Request<IdParams>, res: Response) => {
-  res.json({ success: true, lesson: await content.updateLesson(req.params.id, body(req)) });
+  res.json({ success: true, ...(await content.updateLesson(req.params.id, body(req))) });
+};
+// Editor's "Check" button - same rules as save, nothing is written
+export const checkLesson = async (req: Request, res: Response) => {
+  const { content: text, type } = body<{ content: string; type?: 'text' | 'video' }>(req);
+  res.json({ success: true, ...(await checkStoredLesson(text ?? '', type ?? 'text')) });
 };
 export const deleteLesson = async (req: Request<IdParams>, res: Response) => {
   await content.deleteLesson(req.user!.id, req.params.id);

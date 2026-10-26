@@ -16,6 +16,10 @@
 // - Markdown file paths course folder ke BAHAR nahi ja sakte (../../ blocked).
 // - Course status nahi badalta jab tak `publish: true` na ho (naya = draft).
 // - Sab ek MongoDB transaction mein.
+// - Rich lessons (docs/content/LESSON_FORMAT.md): har lesson ka format check
+//   hota hai - SAARI galtiyan ek saath (file + line), pehli pe ruk ke nahi.
+//   Images/widgets course ke assets/ folder se padhe, check, store
+//   (content-addressed) aur lesson mein "beyownd-asset:<hash>" se replace.
 // ────────────────────────────────────────────────────────────────────────
 
 import fs from 'fs/promises';
@@ -28,6 +32,8 @@ import Quiz from '../../models/quiz.model';
 import Enrollment from '../../models/enrollment.model';
 import { AppError } from '../../utils/AppError';
 import { invalidateCourseCache } from '../catalog.service';
+import { analyzeLesson, findQuizLeaks, rewriteAssetPaths } from '../content/lessonFormat';
+import { ASSET_LIMITS, assetNameFor, assetRef, extOf, inspectAsset, putAsset } from '../../utils/assetStore.util';
 
 export interface QuestionDef {
   prompt: string;
@@ -92,7 +98,41 @@ export interface ImportResult {
   removedLessons: number;
   status: string;
   dryRun: boolean;
+  assets: number;
+  warnings: ImportIssue[];
 }
+
+// One problem in one lesson file - "lessons/m1-01.md line 14: ..."
+export interface ImportIssue {
+  where: string;
+  file: string | null;
+  line: number | null;
+  message: string;
+}
+
+export const formatIssue = (i: ImportIssue) => `${i.where}${i.file ? ` - ${i.file}` : ''}${i.line ? ` line ${i.line}` : ''}: ${i.message}`;
+
+// Asset file inside the course folder: no escaping via symlink, exact
+// filename case (Windows ignores case, the Linux server doesn't)
+const readAssetFile = async (baseDir: string, relative: string): Promise<{ bytes?: Buffer; error?: string }> => {
+  const root = await fs.realpath(path.resolve(baseDir)).catch(() => path.resolve(baseDir));
+  const file = path.resolve(root, relative);
+  if (!file.startsWith(root + path.sep)) return { error: `"${relative}" points outside the course folder` };
+  try {
+    const real = await fs.realpath(file);
+    if (!real.startsWith(root + path.sep)) return { error: `"${relative}" is a link to a file outside the course folder` };
+    const names = await fs.readdir(path.dirname(file));
+    if (!names.includes(path.basename(file))) {
+      const actual = names.find((n) => n.toLowerCase() === path.basename(file).toLowerCase());
+      return { error: `"${relative}" - the file is named "${actual}" (capital letters must match exactly)` };
+    }
+    const stat = await fs.stat(real);
+    if (!stat.isFile()) return { error: `"${relative}" is not a file` };
+    return { bytes: await fs.readFile(real) };
+  } catch {
+    return { error: `file "${relative}" not found (paths start from the folder that has course.json)` };
+  }
+};
 
 // Markdown file padho - sirf course folder ke andar se
 const readInside = async (baseDir: string, relative: string, where: string): Promise<string> => {
@@ -137,24 +177,88 @@ export const importCourse = async (def: CourseDef, baseDir: string, options: Imp
   });
   await validateDoc(courseDraft, 'course');
 
+  const issues: ImportIssue[] = [];
+  const warnings: ImportIssue[] = [];
+  // Collect instead of stopping at the first problem
+  const collect = async (where: string, check: () => Promise<unknown>) => {
+    try {
+      await check();
+    } catch (err) {
+      if (!(err instanceof AppError)) throw err;
+      issues.push({ where, file: null, line: null, message: err.message.startsWith(`${where}: `) ? err.message.slice(where.length + 2) : err.message });
+    }
+  };
+
+  // assets/x.png → stored name; read + checked once even if many lessons use it
+  const assetFiles = new Map<string, { name: string; bytes: Buffer } | { error: string }>();
+
   const modules: { def: ModuleDef; lessons: (LessonDef & { content: string })[] }[] = [];
   for (const [i, m] of def.modules.entries()) {
     const where = `module ${i + 1} ("${m?.title ?? '?'}")`;
     if (!Array.isArray(m?.lessons) || m.lessons.length === 0) fail(where, 'needs at least one lesson');
-    await validateDoc(new Module({ ...m, courseId: placeholderId, order: i + 1 }), where);
+    await collect(where, () => validateDoc(new Module({ ...m, courseId: placeholderId, order: i + 1 }), where));
+    const gradedPrompts = Array.isArray(m.quiz?.questions) ? m.quiz.questions.map((q) => String(q?.prompt ?? '')) : [];
 
     const lessons: (LessonDef & { content: string })[] = [];
     for (const [j, l] of m.lessons.entries()) {
       const lw = `${where}, lesson ${j + 1} ("${l?.title ?? '?'}")`;
-      const content = l.contentFile ? await readInside(baseDir, l.contentFile, lw) : (l.content ?? '');
-      await validateDoc(new Lesson({ ...l, content, courseId: placeholderId, moduleId: placeholderId, order: j + 1 }), lw);
+      const file = l?.contentFile ?? null;
+      let raw: unknown;
+      try {
+        raw = file ? await readInside(baseDir, file, lw) : (l?.content ?? '');
+      } catch (err) {
+        if (!(err instanceof AppError)) throw err;
+        issues.push({ where: lw, file, line: null, message: err.message.slice(lw.length + 2) });
+        continue;
+      }
+      if (typeof raw !== 'string') {
+        issues.push({ where: lw, file, line: null, message: 'content must be text' });
+        continue;
+      }
+
+      const analysis = analyzeLesson(raw, { mode: 'import', lessonType: l?.type === 'video' ? 'video' : 'text' });
+      for (const e of analysis.errors) issues.push({ where: lw, file, line: e.line, message: e.message });
+      for (const w of analysis.warnings) warnings.push({ where: lw, file, line: w.line, message: w.message });
+      for (const e of findQuizLeaks(analysis.quizQuestions, gradedPrompts)) issues.push({ where: lw, file, line: e.line, message: e.message });
+
+      const mapping = new Map<string, string>();
+      for (const ref of analysis.assets) {
+        if (!assetFiles.has(ref.path)) {
+          const read = await readAssetFile(baseDir, ref.path);
+          const ext = extOf(ref.path);
+          const problem = read.error ?? (ext && read.bytes ? inspectAsset(read.bytes, ext) : 'unsupported file type');
+          assetFiles.set(ref.path, problem || !read.bytes || !ext ? { error: problem ?? 'unreadable' } : { name: assetNameFor(read.bytes, ext), bytes: read.bytes });
+        }
+        const stored = assetFiles.get(ref.path)!;
+        if ('error' in stored) {
+          issues.push({ where: lw, file, line: ref.line, message: stored.error });
+          continue;
+        }
+        mapping.set(ref.path, assetRef(stored.name));
+        if (ref.kind === 'image' && stored.bytes.length > ASSET_LIMITS.imageWarnBytes) {
+          warnings.push({ where: lw, file, line: ref.line, message: `"${ref.path}" is ${Math.round(stored.bytes.length / 1024)} KB - slow on mobile data, aim for under ${ASSET_LIMITS.imageWarnBytes / 1024} KB` });
+        }
+      }
+
+      // Same normalization the parser used (BOM, CRLF) so line numbers match
+      const content = rewriteAssetPaths(raw.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n'), mapping);
+      await collect(lw, () => validateDoc(new Lesson({ ...l, content, courseId: placeholderId, moduleId: placeholderId, order: j + 1 }), lw));
       lessons.push({ ...l, content });
     }
     if (m.quiz) {
-      await validateDoc(new Quiz({ ...m.quiz, courseId: placeholderId, moduleId: placeholderId }), `${where}, quiz`);
+      await collect(`${where}, quiz`, () => validateDoc(new Quiz({ ...m.quiz, courseId: placeholderId, moduleId: placeholderId }), `${where}, quiz`));
     }
     modules.push({ def: m, lessons });
   }
+
+  if (issues.length) {
+    const more = issues.length > 1 ? ` (+${issues.length - 1} more - see the full list)` : '';
+    throw new AppError(400, `${formatIssue(issues[0])}${more}`, 'IMPORT_INVALID', {
+      errors: issues.map(formatIssue),
+      warnings: warnings.map(formatIssue),
+    });
+  }
+  const storedAssets = [...assetFiles.values()].filter((a): a is { name: string; bytes: Buffer } => 'name' in a);
 
   const existing = await Course.findOne({ slug: def.slug });
   const status = options.publish ? 'published' : (existing?.status ?? 'draft');
@@ -190,8 +294,14 @@ export const importCourse = async (def: CourseDef, baseDir: string, options: Imp
     removedLessons,
     status,
     dryRun: Boolean(options.dryRun),
+    assets: new Set(storedAssets.map((a) => a.name)).size,
+    warnings,
   };
   if (options.dryRun) return summary;
+
+  // Assets first: content-addressed, so writing them is harmless even if the
+  // transaction below fails (an unused file, never a broken lesson)
+  for (const a of storedAssets) await putAsset(a.name, a.bytes);
 
   // ---- 2. Write (one transaction) ----
   const session = await mongoose.startSession();
@@ -215,7 +325,7 @@ export const importCourse = async (def: CourseDef, baseDir: string, options: Imp
           },
           $setOnInsert: { createdBy: options.createdBy ?? placeholderId },
         },
-        { upsert: true, new: true, session, runValidators: true }
+        { upsert: true, returnDocument: 'after', session, runValidators: true }
       );
       const cid = course._id;
 
@@ -223,7 +333,7 @@ export const importCourse = async (def: CourseDef, baseDir: string, options: Imp
         const module = await Module.findOneAndUpdate(
           { courseId: cid, order: i + 1 },
           { $set: { title: m.def.title, description: m.def.description, isFreePreview: Boolean(m.def.isFreePreview) } },
-          { upsert: true, new: true, session, runValidators: true }
+          { upsert: true, returnDocument: 'after', session, runValidators: true }
         );
         for (const [j, l] of m.lessons.entries()) {
           await Lesson.findOneAndUpdate(
@@ -239,7 +349,7 @@ export const importCourse = async (def: CourseDef, baseDir: string, options: Imp
               },
               ...(l.videoYoutubeId ? {} : { $unset: { videoYoutubeId: 1 } }),
             },
-            { upsert: true, new: true, session, runValidators: true }
+            { upsert: true, returnDocument: 'after', session, runValidators: true }
           );
         }
         await Lesson.deleteMany({ moduleId: module._id, order: { $gt: m.lessons.length } }, { session });
@@ -248,7 +358,7 @@ export const importCourse = async (def: CourseDef, baseDir: string, options: Imp
           await Quiz.findOneAndUpdate(
             { moduleId: module._id },
             { $set: { courseId: cid, passPercent: m.def.quiz.passPercent ?? 60, questions: m.def.quiz.questions } },
-            { upsert: true, new: true, session, runValidators: true }
+            { upsert: true, returnDocument: 'after', session, runValidators: true }
           );
         } else {
           await Quiz.deleteOne({ moduleId: module._id }, { session });

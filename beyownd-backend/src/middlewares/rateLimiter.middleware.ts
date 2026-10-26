@@ -115,3 +115,11 @@ export const publicLimiter = createLimiter({
   name: 'public-ip', windowMinutes: 1, max: 1000, keyBy: 'ip',
   message: 'Too many requests. Please slow down.',
 });
+
+// ---- Lesson images / widgets - alag counter (public pages ka budget na khaaye) ----
+// Browser inhe 1 saal cache karta hai, production mein CDN aage hoga -
+// yeh sirf hot-linking/scraping ka ceiling hai.
+export const assetLimiter = createLimiter({
+  name: 'asset-ip', windowMinutes: 1, max: 3000, keyBy: 'ip',
+  message: 'Too many requests. Please slow down.',
+});

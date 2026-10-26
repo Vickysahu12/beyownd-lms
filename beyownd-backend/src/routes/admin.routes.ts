@@ -2,8 +2,10 @@
 // Sirf admin. Mentor ka kaam (project review) /api/review pe hai.
 // Content editor, batches, students, operations, stats.
 
-import { Router } from 'express';
+import express, { Router } from 'express';
 import * as admin from '../controllers/admin.controller';
+import * as assets from '../controllers/asset.controller';
+import { ASSET_LIMITS } from '../utils/assetStore.util';
 import { protect, restrictTo } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import * as v from '../validators/admin.validator';
@@ -27,9 +29,13 @@ router.get('/modules/:id/quiz', admin.getQuiz);
 router.put('/modules/:id/quiz', v.quizValidator, validate, admin.upsertQuiz);
 router.delete('/modules/:id/quiz', admin.deleteQuiz);
 
+router.post('/lessons/check', v.checkLessonValidator, validate, admin.checkLesson);
 router.get('/lessons/:id', admin.getLesson);
 router.patch('/lessons/:id', v.updateLessonValidator, validate, admin.updateLesson);
 router.delete('/lessons/:id', admin.deleteLesson);
+
+// Lesson images / widgets: raw file bytes in the body, ?filename=diagram.png
+router.post('/assets', express.raw({ type: () => true, limit: ASSET_LIMITS.imageBytes + 1024 }), assets.upload);
 
 // ---- Batches ----
 router.get('/cohorts', v.listQueryCourseValidator, validate, admin.listCohorts);

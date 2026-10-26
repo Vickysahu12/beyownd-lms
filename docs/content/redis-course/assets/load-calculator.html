@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Load calculator</title>
+<style>
+  :root { --bg: #ffffff; --fg: #18181b; --muted: #71717a; --line: #e4e4e7; --chip: #f4f4f5; --ok: #16a34a; --warn: #d97706; --bad: #dc2626; --accent: #2563eb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0b0d; --fg: #fafafa; --muted: #a1a1aa; --line: #27272a; --chip: #18181b; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --accent: #60a5fa; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { padding: 16px; display: grid; gap: 16px; }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button { font: inherit; padding: 10px 14px; min-height: 44px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+  .seg button[aria-pressed=true] { background: var(--chip); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .big { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .gauge { height: 10px; border-radius: 99px; background: var(--chip); overflow: hidden; margin-top: 8px; }
+  .gauge i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .25s ease, background-color .25s ease; }
+  .state { font-weight: 600; }
+  .muted { color: var(--muted); font-size: 13px; }
+  @media (prefers-reduced-motion: reduce) { .gauge i { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <label for="readers">Readers per minute: <b id="readers-out">2,00,000</b></label>
+    <input id="readers" type="range" min="1000" max="300000" step="1000" value="200000">
+  </div>
+  <div class="seg" role="group" aria-label="Cache">
+    <button type="button" data-cache="off" aria-pressed="true">No cache</button>
+    <button type="button" data-cache="on" aria-pressed="false">Redis · 95% hits</button>
+  </div>
+  <div class="grid" aria-live="polite">
+    <div class="card"><div class="muted">Database queries / sec</div><div class="big" id="qps">0</div><div class="muted">ceiling: 5,000 / sec</div></div>
+    <div class="card"><div class="muted">Database utilisation</div><div class="big" id="util">0%</div><div class="gauge"><i id="gauge"></i></div></div>
+    <div class="card"><div class="muted">Response time</div><div class="big" id="latency">20 ms</div><div class="state" id="state">Healthy</div></div>
+  </div>
+  <p class="muted">100 connections · 20 ms per query · 4 queries per page view. Illustrative numbers, not a benchmark.</p>
+</main>
+<script>
+  var CEILING = 100 / 0.020; // connections ÷ seconds per query
+  var cache = 'off';
+  var readers = document.getElementById('readers');
+  var fmt = function (n) { return Math.round(n).toLocaleString('en-IN'); };
+
+  function render() {
+    var perMinute = Number(readers.value);
+    var qps = (perMinute / 60) * 4 * (cache === 'on' ? 0.05 : 1);
+    var util = qps / CEILING;
+    var latency = util < 0.95 ? 20 / (1 - util) : Infinity;
+    var gauge = document.getElementById('gauge');
+    var state = document.getElementById('state');
+
+    document.getElementById('readers-out').textContent = fmt(perMinute);
+    document.getElementById('qps').textContent = fmt(qps);
+    document.getElementById('util').textContent = Math.round(util * 100) + '%';
+    gauge.style.width = Math.min(100, util * 100) + '%';
+    document.getElementById('latency').textContent = latency === Infinity ? 'timeouts' : fmt(latency) + ' ms';
+
+    var level = util < 0.7 ? 'ok' : util < 1 ? 'warn' : 'bad';
+    gauge.style.background = 'var(--' + level + ')';
+    state.style.color = 'var(--' + level + ')';
+    state.textContent = level === 'ok' ? 'Healthy' : level === 'warn' ? 'Under strain' : 'Down: the queue never drains';
+  }
+
+  readers.addEventListener('input', render);
+  document.querySelectorAll('[data-cache]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      cache = b.getAttribute('data-cache');
+      document.querySelectorAll('[data-cache]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      render();
+    });
+  });
+  render();
+
+  // Tell the lesson page how tall we are (LESSON_FORMAT.md → widget contract)
+  function reportHeight() {
+    parent.postMessage({ type: 'beyownd:resize', height: document.documentElement.scrollHeight }, '*');
+  }
+  new ResizeObserver(reportHeight).observe(document.body);
+  reportHeight();
+</script>
+</body>
+</html>

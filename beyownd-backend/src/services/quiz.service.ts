@@ -203,7 +203,7 @@ export const submitAttempt = async (
       $max: { 'progress.$.bestQuizScorePercent': scorePercent },
       ...(passed ? { $set: { 'progress.$.quizPassed': true } } : {}),
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!updated) throw AppError.notFound('Enrollment not found');
 

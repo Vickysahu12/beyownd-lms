@@ -46,8 +46,8 @@ const CONTENT = [
     description: 'How the web works, HTML and CSS.',
     isFreePreview: true,
     lessons: [
-      { title: 'How the web works', minutes: 12, content: '# How the web works\n\nWhen you open a website, your browser sends an **HTTP request** to a server...\n\n```text\nBrowser ──request──► Server\nBrowser ◄─response── Server\n```' },
-      { title: 'HTML: structure of a page', minutes: 15, content: '# HTML\n\nHTML describes the *structure* of a page.\n\n```html\n<h1>Hello Beyownd</h1>\n<p>My first page</p>\n```' },
+      { title: 'How the web works', minutes: 12, content: 'When you open a website, your browser sends an **HTTP request** to a server...\n\n```text\nBrowser ──request──► Server\nBrowser ◄─response── Server\n```' },
+      { title: 'HTML: structure of a page', minutes: 15, content: 'HTML describes the *structure* of a page.\n\n```html\n<h1>Hello Beyownd</h1>\n<p>My first page</p>\n```' },
       { title: 'CSS basics (video)', minutes: 20, type: 'video' as const, videoYoutubeId: 'OEV8gMkCHXQ', content: 'Watch the video, then style your page from the previous lesson.' },
     ],
   },
@@ -56,8 +56,8 @@ const CONTENT = [
     description: 'Variables, functions and the DOM.',
     isFreePreview: false,
     lessons: [
-      { title: 'Variables and types', minutes: 15, content: '# Variables\n\n```js\nconst name = "Ravi";\nlet score = 0;\n```' },
-      { title: 'Functions', minutes: 15, content: '# Functions\n\n```js\nfunction greet(name) {\n  return `Hello ${name}`;\n}\n```' },
+      { title: 'Variables and types', minutes: 15, content: '```js\nconst name = "Ravi";\nlet score = 0;\n```' },
+      { title: 'Functions', minutes: 15, content: '```js\nfunction greet(name) {\n  return `Hello ${name}`;\n}\n```' },
     ],
   },
   {
@@ -65,8 +65,8 @@ const CONTENT = [
     description: 'Build your first API with Express.',
     isFreePreview: false,
     lessons: [
-      { title: 'Your first Express server', minutes: 20, content: '# Express\n\n```js\nconst app = express();\napp.get("/", (req, res) => res.send("Hi"));\n```' },
-      { title: 'REST APIs', minutes: 20, content: '# REST\n\nGET reads, POST creates, PATCH updates, DELETE removes.' },
+      { title: 'Your first Express server', minutes: 20, content: '```js\nconst app = express();\napp.get("/", (req, res) => res.send("Hi"));\n```' },
+      { title: 'REST APIs', minutes: 20, content: 'GET reads, POST creates, PATCH updates, DELETE removes.' },
     ],
   },
 ];
@@ -113,7 +113,7 @@ export const seedDevCourse = async (enrollEmail?: string) => {
       },
       $setOnInsert: { createdBy: admin?._id ?? new Types.ObjectId() },
     },
-    { upsert: true, new: true, runValidators: true }
+    { upsert: true, returnDocument: 'after', runValidators: true }
   );
 
   const lessonIds: string[] = [];
@@ -122,14 +122,14 @@ export const seedDevCourse = async (enrollEmail?: string) => {
     const module = await Module.findOneAndUpdate(
       { courseId: course._id, order: i + 1 },
       { $set: { title: m.title, description: m.description, isFreePreview: m.isFreePreview } },
-      { upsert: true, new: true, runValidators: true }
+      { upsert: true, returnDocument: 'after', runValidators: true }
     );
     const questions = QUIZZES[i + 1];
     if (questions) {
       await Quiz.findOneAndUpdate(
         { moduleId: module._id },
         { $set: { courseId: course._id, passPercent: 60, questions } },
-        { upsert: true, new: true, runValidators: true }
+        { upsert: true, returnDocument: 'after', runValidators: true }
       );
       quizModuleIds.push(String(module._id));
     }
@@ -146,7 +146,7 @@ export const seedDevCourse = async (enrollEmail?: string) => {
             estimatedMinutes: l.minutes,
           },
         },
-        { upsert: true, new: true, runValidators: true }
+        { upsert: true, returnDocument: 'after', runValidators: true }
       );
       lessonIds.push(String(lesson._id));
     }
@@ -169,7 +169,7 @@ export const seedDevCourse = async (enrollEmail?: string) => {
         communityLink: 'https://chat.whatsapp.com/dev-placeholder',
       },
     },
-    { upsert: true, new: true, runValidators: true }
+    { upsert: true, returnDocument: 'after', runValidators: true }
   );
 
   // Pehle se cached purana data na dikhe
@@ -182,7 +182,7 @@ export const seedDevCourse = async (enrollEmail?: string) => {
     await Enrollment.findOneAndUpdate(
       { userId: user._id, cohortId: cohort._id },
       { $set: { courseId: course._id, status: 'active' }, $setOnInsert: { activatedAt: new Date() } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
     enrolled = user.email;
   }

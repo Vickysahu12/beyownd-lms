@@ -8,6 +8,7 @@
 | --- | --- |
 | [REMAINING.md](REMAINING.md) | **Every task left until launch** — owner, status, estimate, timeline, risks |
 | [content/COURSE_FORMAT.md](content/COURSE_FORMAT.md) | **How to write a course** (folder + Markdown) and load it with one command |
+| [content/LESSON_FORMAT.md](content/LESSON_FORMAT.md) | **Rich lesson format**: sections, quizzes, steps, callouts, code titles, widgets. Reference course: [content/redis-course/](content/redis-course/) |
 | [business-model.md](business-model.md) | What we sell (₹599–799 virtual internship program), why the credentials must be earned, pre-launch checklist |
 | [roadmap.md](roadmap.md) | Phases 0–8 with dates to the Diwali launch, cut line |
 | [scalability.md](scalability.md) | How we handle the first 1,000 users and how we prove it |
@@ -23,6 +24,7 @@
 | [interview/](interview/) | You, in an interview | How to explain it, trade-offs, bugs fixed, Q&A |
 | [frontend/PAGES.md](frontend/PAGES.md) | Frontend session | Every page + SEO + build order |
 | [frontend/BRIEF.md](frontend/BRIEF.md) | Frontend session | Brand, landing sections, motion bar, app screens, API integration rules |
+| [frontend/LESSON_RENDERER.md](frontend/LESSON_RENDERER.md) | Frontend session | Rendering rich lessons: blocks, sidebar, sandboxed widgets, editor APIs |
 | [design/](design/) | Code | [user-flow.md](design/user-flow.md) · [schemas.md](design/schemas.md) (every collection) · [api-routes.md](design/api-routes.md) (every endpoint) |
 | [module/](module/) | Code | Early build logs (Day 1, auth module) |
 

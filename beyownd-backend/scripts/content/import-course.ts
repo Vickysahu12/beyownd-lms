@@ -40,7 +40,7 @@ const main = async () => {
   }
 
   // Lazy imports: env validation + Redis client sirf yahan
-  const { importCourse } = await import('../../src/services/admin/courseImport.service');
+  const { importCourse, formatIssue } = await import('../../src/services/admin/courseImport.service');
   const { redisClient } = await import('../../src/config/redis');
   const { default: User } = await import('../../src/models/user.model');
 
@@ -51,10 +51,22 @@ const main = async () => {
   try {
     const admin = await User.findOne({ role: 'admin' }).select({ _id: 1 });
     const result = await importCourse(def as never, path.dirname(jsonPath), { dryRun, publish, createdBy: admin?._id as never });
+    const { warnings, ...counts } = result;
+    if (warnings.length) {
+      console.log(`\n⚠ ${warnings.length} warning(s) - the course works, but worth fixing:`);
+      for (const w of warnings) console.log(`  - ${formatIssue(w)}`);
+    }
     console.log(dryRun ? '\nValid ✓ - nothing was written. Run again without --dry-run to import.' : '\nImported ✓');
-    console.table(result);
+    console.table(counts);
   } catch (err) {
-    console.error(`\n✗ ${(err as Error).message}`);
+    // Lesson format problems come as a full list (file + line each)
+    const errors = (err as { details?: { errors?: string[] } }).details?.errors;
+    if (errors?.length) {
+      console.error(`\n✗ ${errors.length} problem(s) - nothing was imported. Fix these and run again:`);
+      for (const e of errors) console.error(`  - ${e}`);
+    } else {
+      console.error(`\n✗ ${(err as Error).message}`);
+    }
     process.exitCode = 1;
   } finally {
     await mongoose.disconnect();

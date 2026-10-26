@@ -37,7 +37,7 @@ Business  [█░░░░░░░░░░░░░░░░░░░]  5%
 | Y5 | **Policy texts:** Terms, Privacy, Refund & Cancellation, Contact (legal party: GrewDo) | ⏳ 🟡 | Razorpay requires them; footer links to them | Oct 26 |
 | Y6 | **Letter details:** GrewDo registration no., address, signatory name, `logo.png`, `signature.png` | ⏳ 🟡 | Placeholders print on PDFs until then | Oct 30 |
 | Y7 | **Ask 2–3 college TPOs** what internship letter format they accept | ⏳ 🟡 | We match the PDF templates to it | Oct 24 |
-| Y8 | **Real course content** (write it in the [import format](content/COURSE_FORMAT.md) — copy [example-course/](content/example-course/)) for at least 1 program: 3–5 modules, 15–25 lessons, 1 quiz per module (5–10 questions), final project brief + rubric | ⏳ 🔴 | **Students pay for this.** Several days of writing — do it in Google Docs/Notion in parallel | Nov 1 |
+| Y8 | **Real course content** (write it in the [import format](content/COURSE_FORMAT.md) + [rich lesson format](content/LESSON_FORMAT.md) — copy [redis-course/](content/redis-course/); Claude can generate it with the `lesson-writer` skill) for at least 1 program: 3–5 modules, 15–25 lessons, 1 quiz per module (5–10 questions), final project brief + rubric | ⏳ 🔴 | **Students pay for this.** Several days of writing — do it in Google Docs/Notion in parallel | Nov 1 |
 | Y9 | **Decide batch dates + price** for the first batch (use onboarding "certificate needed by" answers) | ⏳ 🟡 | Needed to create the first cohort | Oct 30 |
 | Y10 | **Illustrations** for the landing page (clouds, sun, plane/balloon, certificate) — own or licensed | 🟡 | Frontend uses placeholders until then | Oct 25 |
 | Y11 | **Beta testers:** line up 10–20 students from your community | ⏳ 🟡 | Beta runs Nov 4–5 | Nov 1 |
@@ -55,13 +55,14 @@ Business  [█░░░░░░░░░░░░░░░░░░░]  5%
 | B6 | **Phase 5 — Admin APIs (essentials):** create/edit course, modules, lessons, quizzes; cohorts; students list + search; revoke credential; refund marking; basic stats; audit log | ✅ | — | `/api/admin/*` + `make-admin` script. See [phases/phase-5-admin.md](phases/phase-5-admin.md) |
 | B7 | **Content import script** (fallback): load a course from a JSON/Markdown file | ✅ | — | `npm run import:course`. **Owner: write Y8 in this format → [content/COURSE_FORMAT.md](content/COURSE_FORMAT.md)** |
 | B8 | **Phase 6 — Docker:** Dockerfile (API + worker), `docker-compose.yml` (api, worker, redis, nginx) | ⏳ | 3 h | Graceful shutdown finally verified on Linux here |
-| B9 | **Phase 6 — Cloudflare R2** storage (swap `storage.util.ts`) | ⏳ | 2 h | Needs a Cloudflare account (🙋) |
+| B9 | **Phase 6 — Cloudflare R2** storage (swap `storage.util.ts` + `assetStore.util.ts`, set `ASSET_PUBLIC_URL` to the CDN) | ⏳ | 2 h | Needs a Cloudflare account (🙋) |
 | B10 | **Phase 6 — Deploy:** VPS + Nginx + HTTPS for `api.beyownd.in`; separate **production** Atlas database; Razorpay webhook URL; production `.env` | ⏳ | 0.5 day | Needs Y3 + a VPS (🙋 buys it) |
 | B11 | **Phase 6 — Staging environment** (copy of production with test keys) | ⏳ | 2 h | Real Razorpay test payments + real emails end-to-end |
 | B12 | **Phase 6 — Monitoring:** Sentry, uptime monitor, Atlas backups, Redis persistence | ⏳ | 2 h | |
 | B13 | **Phase 6 — Load test (k6):** 300 req/s, login burst, quiz burst, webhook replay | ⏳ | 3 h | **Proves** the 1,000-user claim |
 | B14 | **Phase 6 — Security pass:** OWASP checklist, secrets, headers, rate limits, issuer placeholders gone | ⏳ | 2 h | |
 | B15 | **CD:** auto-deploy when CI is green | ⏳ | 1 h | After B8–B10 |
+| B16 | **Rich lessons:** format + checker (line numbers), image/widget upload + sandboxed serving, import with `assets/`, lesson API `sections`, `check:lesson` CLI, lesson-writer skill | ✅ | — | [phases/phase-5b-rich-lessons.md](phases/phase-5b-rich-lessons.md) · format [content/LESSON_FORMAT.md](content/LESSON_FORMAT.md) · reference [content/redis-course/](content/redis-course/) · frontend brief [frontend/LESSON_RENDERER.md](frontend/LESSON_RENDERER.md) |
 
 **Backend total remaining: ~5–6 working days.**
 

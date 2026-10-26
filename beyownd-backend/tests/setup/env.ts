@@ -22,3 +22,5 @@ process.env.PORT = '0';
 // PDFs from tests go here (gitignored), never into the dev documents folder
 process.env.STORAGE_LOCAL_DIR = require('path').join(__dirname, '..', '..', '.tmp', 'documents-test');
 process.env.API_PUBLIC_URL = 'http://localhost:5000';
+// Lesson images/widgets from tests - never into the dev assets folder
+process.env.ASSET_LOCAL_DIR = require('path').join(__dirname, '..', '..', '.tmp', 'assets-test');

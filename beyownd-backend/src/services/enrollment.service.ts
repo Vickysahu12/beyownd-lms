@@ -296,7 +296,7 @@ export const completeLesson = async (enrollmentId: string, userId: string, lesso
   const updated = await Enrollment.findOneAndUpdate(
     { _id: enrollment._id, 'progress.moduleId': moduleObjectId },
     { $addToSet: { 'progress.$.completedLessonIds': new Types.ObjectId(lesson.id) } },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!updated) throw AppError.notFound('Enrollment not found');
 

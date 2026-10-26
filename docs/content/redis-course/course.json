@@ -1,0 +1,122 @@
+{
+  "slug": "redis-beyond-caching",
+  "title": "Redis, Beyond the Cache",
+  "tagline": "Caching, rate limiting, real-time and leaderboards with Redis and Node.js",
+  "description": "Start with a viral post that takes a database down, then fix it step by step: cache-aside with TTLs, stale data, stampedes, avalanches, eviction and failover. Then use Redis beyond caching: rate limiting Express and Socket.IO, scaling Socket.IO across servers, and real-time leaderboards with sorted sets.",
+  "level": "intermediate",
+  "skills": ["Redis", "Node.js", "ioredis", "Caching", "Rate limiting", "Socket.IO"],
+  "durationWeeks": 4,
+  "defaultPricePaise": 59900,
+  "project": {
+    "title": "Make a slow blog API survive viral traffic",
+    "briefFile": "project.md",
+    "rubric": [
+      { "criterion": "Cache-aside with sensible TTLs and invalidation on update", "maxScore": 10 },
+      { "criterion": "Stampede and penetration protection", "maxScore": 10 },
+      { "criterion": "Rate limiting shared across server instances", "maxScore": 10 },
+      { "criterion": "Leaderboard with sorted sets", "maxScore": 10 },
+      { "criterion": "README with before/after numbers", "maxScore": 10 }
+    ],
+    "passScorePercent": 60
+  },
+  "modules": [
+    {
+      "title": "Why caching, and Redis basics",
+      "description": "Why a database chokes under read traffic, what Redis is, and your first commands with ioredis.",
+      "isFreePreview": true,
+      "lessons": [
+        { "title": "The viral post that killed the database", "contentFile": "lessons/01-why-databases-choke.md", "estimatedMinutes": 15 },
+        { "title": "Enter Redis, and setting it up", "contentFile": "lessons/02-enter-redis.md", "estimatedMinutes": 20 }
+      ],
+      "quiz": {
+        "passPercent": 60,
+        "questions": [
+          {
+            "prompt": "Why does a viral read-heavy page overload the database even when every query uses an index?",
+            "options": ["Each read still costs a pooled connection and real work, and the pool has a fixed size", "Indexes stop working above 1,000 requests", "MongoDB only allows one reader at a time"],
+            "correctOptionIndexes": [0],
+            "explanation": "A pool of N connections can only finish N ÷ (time per query) queries per second. Past that, requests queue."
+          },
+          {
+            "prompt": "Which of these makes Redis a better shared cache than a JavaScript Map inside your app?",
+            "type": "multiple",
+            "options": ["Every server instance reads the same data", "It survives an app restart or deploy", "It runs inside the Node.js heap", "It has built-in expiry"],
+            "correctOptionIndexes": [0, 1, 3],
+            "explanation": "A Map lives in one process's heap: not shared, lost on restart, no expiry. Redis is a separate shared process with TTLs."
+          },
+          {
+            "prompt": "In ioredis, what does redis.get() return for a key that doesn't exist?",
+            "options": ["null", "undefined", "An empty string", "It throws an error"],
+            "correctOptionIndexes": [0],
+            "explanation": "Redis replies with a nil bulk string, which ioredis turns into null."
+          }
+        ]
+      }
+    },
+    {
+      "title": "Caching in production",
+      "description": "Cache-aside, TTLs, stale data, stampedes, avalanches, penetration, eviction and failures.",
+      "lessons": [
+        { "title": "Cache-aside and TTLs", "contentFile": "lessons/03-cache-aside-and-ttl.md", "estimatedMinutes": 20 },
+        { "title": "Stale data and cache stampedes", "contentFile": "lessons/04-stale-data-and-stampedes.md", "estimatedMinutes": 25 },
+        { "title": "Avalanche, penetration, memory and failures", "contentFile": "lessons/05-avalanche-memory-failures.md", "estimatedMinutes": 25 }
+      ],
+      "quiz": {
+        "passPercent": 60,
+        "questions": [
+          {
+            "prompt": "After updating a post in the database, what should the server do with the cached copy?",
+            "options": ["Delete the cache key after the database write succeeds", "Delete the cache key before the database write", "Leave it and wait for the TTL", "Write the new value into Redis before the database"],
+            "correctOptionIndexes": [0],
+            "explanation": "Update the DB first, then delete the key. Deleting first lets a reader re-cache the old value in between."
+          },
+          {
+            "prompt": "Ten thousand keys were cached at the same moment with the same TTL. What is the simplest way to stop them all expiring together?",
+            "options": ["Add a small random jitter to each TTL", "Use a longer TTL for all of them", "Turn off eviction", "Cache them in a JavaScript Map instead"],
+            "correctOptionIndexes": [0],
+            "explanation": "Jitter spreads expiries over time, so the database never gets all the misses in the same second."
+          },
+          {
+            "prompt": "Requests keep asking for post IDs that don't exist, so every one goes to the database. Which fixes help?",
+            "type": "multiple",
+            "options": ["Cache the 'not found' result for a short time", "Validate IDs before touching the cache or database", "Increase maxmemory", "Use a longer TTL for real posts"],
+            "correctOptionIndexes": [0, 1],
+            "explanation": "That's cache penetration. Negative caching and input validation stop the misses; more memory or longer TTLs don't."
+          }
+        ]
+      }
+    },
+    {
+      "title": "Redis beyond caching",
+      "description": "Data structures, rate limiting Express and Socket.IO, scaling Socket.IO, and leaderboards.",
+      "lessons": [
+        { "title": "Data structures and rate limiting Express", "contentFile": "lessons/06-data-structures-and-rate-limiting.md", "estimatedMinutes": 30 },
+        { "title": "Socket.IO: limits and many servers", "contentFile": "lessons/07-socketio-limits-and-scaling.md", "estimatedMinutes": 25 },
+        { "title": "Leaderboards and the production checklist", "contentFile": "lessons/08-leaderboards-and-checklist.md", "estimatedMinutes": 20 }
+      ],
+      "quiz": {
+        "passPercent": 60,
+        "questions": [
+          {
+            "prompt": "Your API runs on 3 servers. Why does an in-memory rate limiter let a user make 3× the allowed requests?",
+            "options": ["Each server keeps its own counter, so the load balancer spreads the user's requests across 3 counters", "In-memory counters reset every second", "Express ignores middleware on the second server", "Redis is required for Express to run on more than one server"],
+            "correctOptionIndexes": [0],
+            "explanation": "The limit only holds if every server increments the same counter, which is what Redis gives you."
+          },
+          {
+            "prompt": "Which Redis structure keeps players ranked by score, with rank lookups in O(log N)?",
+            "options": ["Sorted set (ZADD, ZREVRANGE, ZREVRANK)", "List (LPUSH, LRANGE)", "Hash (HSET, HGETALL)", "String (INCR)"],
+            "correctOptionIndexes": [0],
+            "explanation": "Sorted sets keep members ordered by score, so the top N and any player's rank are cheap."
+          },
+          {
+            "prompt": "What does the Socket.IO Redis adapter do when you emit to a room from one server?",
+            "options": ["Publishes the event through Redis so every server delivers it to its own connected sockets", "Stores every message in a Redis list forever", "Moves all sockets onto one server", "Rate limits the event"],
+            "correctOptionIndexes": [0],
+            "explanation": "The adapter uses Pub/Sub to fan the broadcast out to all servers, so users on any server see it."
+          }
+        ]
+      }
+    }
+  ]
+}

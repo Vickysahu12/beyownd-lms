@@ -196,7 +196,7 @@ export const decide = async (submissionId: string, reviewerId: string, input: De
       const updated = await ProjectSubmission.findOneAndUpdate(
         { _id: submission._id, status: 'pending' },
         { $set: { status: input.decision, review } },
-        { new: true, session }
+        { returnDocument: 'after', session }
       );
       if (!updated) {
         throw AppError.conflict('This submission has already been reviewed', 'SUBMISSION_ALREADY_REVIEWED');

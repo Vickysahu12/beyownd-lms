@@ -346,7 +346,7 @@ describe('Course import (B7) - using docs/content/example-course', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'byd-import-'));
     try {
       fs.writeFileSync(path.join(dir, 'brief.md'), '# Brief\nBuild it.');
-      fs.writeFileSync(path.join(dir, 'l1.md'), '# Lesson one');
+      fs.writeFileSync(path.join(dir, 'l1.md'), '## Lesson one\n\nHello.');
       const def: CourseDef = {
         ...exampleDef(),
         slug: 'tiny-course',

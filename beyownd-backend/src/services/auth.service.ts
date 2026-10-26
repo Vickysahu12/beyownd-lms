@@ -114,7 +114,7 @@ export const signup = async (name: string, email: string, password: string) => {
 export const verifyEmail = async (email: string, otp: string): Promise<AuthResult> => {
   await consumeOtp('verify', email, otp);
 
-  const user = await User.findOneAndUpdate({ email }, { isVerified: true }, { new: true });
+  const user = await User.findOneAndUpdate({ email }, { isVerified: true }, { returnDocument: 'after' });
   if (!user) throw AppError.badRequest('Invalid or expired code', 'OTP_INVALID');
 
   return issueAuth(user);

@@ -130,6 +130,8 @@ Built exactly as listed below, plus: `GET /admin/courses/:id` returns the editor
 | PUT | `/admin/courses/:id/modules/order` | `{ moduleIds: [...] }` reorder in one request |
 | POST | `/admin/modules/:id/lessons` | Add lesson |
 | PATCH / DELETE | `/admin/lessons/:id` | Update / delete |
+| POST | `/admin/lessons/check` | `{ content, type? }` → `{ ok, errors[{line,message}], warnings[], sections[], stats }`. Same rules as save, writes nothing |
+| POST | `/admin/assets?filename=x.png` | Raw file bytes as the body (≤ 2 MB images, ≤ 300 KB widgets) → `{ asset: { name, ref, url, kind, bytes } }`. `ASSET_INVALID` / `PAYLOAD_TOO_LARGE` |
 | PUT | `/admin/modules/:id/lessons/order` | Reorder lessons |
 | PUT | `/admin/modules/:id/quiz` | Create or replace the module's quiz |
 
@@ -157,6 +159,14 @@ Built exactly as listed below, plus: `GET /admin/courses/:id` returns the editor
 | GET | `/admin/stats/overview` | Signups, onboarded, paid, active this week, revenue, certificates issued |
 | GET | `/admin/stats/funnel?courseId=` | Per module: how many students reached / completed it — shows where students drop off |
 | GET | `/admin/stats/colleges` | Students and paid enrollments per college |
+
+## 10b. Lesson assets ✅ (Phase 5b)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/assets/:name` | Public. `<sha256-16hex>.<png|jpg|webp|gif|svg|html>`. Immutable cache + ETag/304. HTML widgets: CSP `sandbox allow-scripts`, `connect-src 'none'`, `frame-ancestors` = frontend. Rate limit `asset-ip` 3000/min |
+
+Lesson create/update (`/admin/modules/:id/lessons`, `/admin/lessons/:id`) now validate the [lesson format](../content/LESSON_FORMAT.md) when content changes → `400 LESSON_FORMAT_INVALID` with `details.errors`; success responses add `warnings`. Quiz save → `QUIZ_ANSWER_LEAK` if a question copies a lesson's practice quiz. Lesson responses (`/courses/:slug/preview/lessons/:id`, `/enrollments/:id/lessons/:id`) add `sections[]` and `formatVersion: 1`; asset refs arrive as URLs.
 
 ## 11. New error codes introduced by Phases 1–3
 

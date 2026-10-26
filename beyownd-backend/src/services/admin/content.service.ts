@@ -24,6 +24,8 @@ import mongoose, { isValidObjectId, Types } from 'mongoose';
 import Course, { ICourse } from '../../models/course.model';
 import Module, { IModule } from '../../models/module.model';
 import Lesson from '../../models/lesson.model';
+import { assertValidStoredLesson } from '../content/lessonContent.service';
+import { analyzeLesson, findQuizLeaks } from '../content/lessonFormat';
 import Quiz from '../../models/quiz.model';
 import Enrollment from '../../models/enrollment.model';
 import { AppError } from '../../utils/AppError';
@@ -268,6 +270,23 @@ export interface LessonInput {
   estimatedMinutes?: number;
 }
 
+// Rich-lesson format check (docs/content/LESSON_FORMAT.md) - only when the
+// content (or type) actually changes, so old lessons can still be renamed.
+// Errors → 400 LESSON_FORMAT_INVALID with every line; warnings go back to the editor.
+const checkLessonContent = async (lesson: InstanceType<typeof Lesson>) => {
+  if (!lesson.isNew && !lesson.isModified('content') && !lesson.isModified('type')) return [];
+  const check = await assertValidStoredLesson(lesson.content ?? '', lesson.type);
+  const quiz = await Quiz.findOne({ moduleId: lesson.moduleId }).select({ 'questions.prompt': 1 });
+  if (quiz) {
+    const { quizQuestions } = analyzeLesson(lesson.content ?? '', { mode: 'stored' });
+    const leaks = findQuizLeaks(quizQuestions, quiz.questions.map((q) => q.prompt));
+    if (leaks.length) {
+      throw new AppError(400, `Line ${leaks[0].line}: ${leaks[0].message}`, 'LESSON_FORMAT_INVALID', { errors: leaks, warnings: check.warnings });
+    }
+  }
+  return check.warnings;
+};
+
 export const addLesson = async (moduleId: string, input: LessonInput) => {
   const module = await loadModule(moduleId);
   const lesson = new Lesson({
@@ -277,9 +296,10 @@ export const addLesson = async (moduleId: string, input: LessonInput) => {
     moduleId: module._id,
     order: await nextOrder(Lesson, { moduleId: module._id }),
   });
+  const warnings = await checkLessonContent(lesson);
   await lesson.save(); // save() → video-needs-YouTube-ID hook chalta hai
   await refreshCourseCache(module.courseId);
-  return lesson;
+  return { lesson, warnings };
 };
 
 export const getLesson = loadLesson;
@@ -287,9 +307,10 @@ export const getLesson = loadLesson;
 export const updateLesson = async (lessonId: string, input: LessonInput) => {
   const lesson = await loadLesson(lessonId);
   lesson.set({ ...input, ...(input.videoYoutubeId === null ? { videoYoutubeId: undefined } : {}) });
+  const warnings = await checkLessonContent(lesson);
   await lesson.save();
   await refreshCourseCache(lesson.courseId);
-  return lesson;
+  return { lesson, warnings };
 };
 
 export const deleteLesson = async (actorId: string, lessonId: string) => {
@@ -329,6 +350,13 @@ export const upsertQuiz = async (moduleId: string, input: QuizInput) => {
   const module = await loadModule(moduleId);
   const quiz = (await Quiz.findOne({ moduleId })) ?? new Quiz({ moduleId: module._id, courseId: module.courseId });
   quiz.set({ passPercent: input.passPercent ?? quiz.passPercent ?? 60, questions: input.questions });
+  const lessons = await Lesson.find({ moduleId: module._id }).select({ title: 1, content: 1 });
+  for (const l of lessons) {
+    const leaks = findQuizLeaks(analyzeLesson(l.content ?? '', { mode: 'stored' }).quizQuestions, input.questions.map((q) => q.prompt));
+    if (leaks.length) {
+      throw AppError.badRequest(`A question is also a practice quiz in lesson "${l.title}" (line ${leaks[0].line}) - students already see its answer there`, 'QUIZ_ANSWER_LEAK');
+    }
+  }
   await quiz.save(); // question-level validation (option ranges, single = 1 answer)
   await refreshCourseCache(module.courseId);
   return quiz;

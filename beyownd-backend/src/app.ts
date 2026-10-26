@@ -31,6 +31,7 @@ import webhookRoutes from './routes/webhook.routes';
 import { credentialRoutes, verifyRoutes, fileRoutes } from './routes/credential.routes';
 import reviewRoutes from './routes/review.routes';
 import adminRoutes from './routes/admin.routes';
+import assetRoutes from './routes/asset.routes';
 
 const app: Application = express();
 
@@ -78,6 +79,9 @@ app.use('/api/webhooks', webhookRoutes);
 // 100kb limit - koi bhi legit request (signup, quiz answers, onboarding)
 // isse bahut chhoti hai. Bina limit ke koi 50MB JSON bhej ke server ki
 // memory/CPU kha sakta hai.
+// Admin editor exception: a 50,000-char lesson in Hindi is ~150 KB of UTF-8
+// (plus JSON escaping). Parsed here first; the global parser then skips it.
+app.use('/api/admin', express.json({ limit: '512kb' }));
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
 
@@ -92,6 +96,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/credentials', credentialRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/assets', assetRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 

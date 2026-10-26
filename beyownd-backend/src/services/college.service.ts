@@ -50,7 +50,7 @@ export const findOrCreateCollege = async (rawName: string): Promise<ICollege> =>
     College.findOneAndUpdate(
       { normalizedName },
       { $setOnInsert: { name, normalizedName, words } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
   try {

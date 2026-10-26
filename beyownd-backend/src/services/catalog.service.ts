@@ -19,6 +19,8 @@ import { isValidObjectId, Types } from 'mongoose';
 import Course, { ICourse } from '../models/course.model';
 import Module from '../models/module.model';
 import Lesson from '../models/lesson.model';
+import { prepareForDelivery } from './content/lessonContent.service';
+import type { LessonSection } from './content/lessonFormat';
 import Cohort, { ICohort } from '../models/cohort.model';
 import Quiz from '../models/quiz.model';
 import { AppError } from '../utils/AppError';
@@ -97,7 +99,13 @@ export interface LessonContent {
   title: string;
   order: number;
   type: 'text' | 'video';
+  // Markdown + blocks (docs/content/LESSON_FORMAT.md), asset refs already
+  // turned into URLs
   content: string;
+  // "## " headings, in order - the sidebar / mobile "Sections" menu.
+  // id = the anchor the renderer puts on that heading.
+  sections: LessonSection[];
+  formatVersion: 1;
   videoYoutubeId: string | null;
   estimatedMinutes: number;
 }
@@ -229,6 +237,7 @@ export const getLessonContent = async (lessonId: string): Promise<LessonContent 
   return getOrSet<LessonContent | null>(cacheKeys.lesson(lessonId), LESSON_TTL, async () => {
     const l = await Lesson.findById(lessonId);
     if (!l) return null;
+    const delivered = prepareForDelivery(l.content ?? '');
     return {
       id: String(l._id),
       courseId: String(l.courseId),
@@ -236,7 +245,9 @@ export const getLessonContent = async (lessonId: string): Promise<LessonContent 
       title: l.title,
       order: l.order,
       type: l.type,
-      content: l.content,
+      content: delivered.content,
+      sections: delivered.sections,
+      formatVersion: 1,
       videoYoutubeId: l.videoYoutubeId ?? null,
       estimatedMinutes: l.estimatedMinutes,
     };

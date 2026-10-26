@@ -61,6 +61,10 @@ const lessonRules = (mode: Mode): ValidationChain[] => [
 ];
 export const createLessonValidator = lessonRules('create');
 export const updateLessonValidator = lessonRules('update');
+export const checkLessonValidator = [
+  body('content').isString().withMessage('content must be text').isLength({ max: 50000 }).withMessage('Lesson is longer than 50,000 characters'),
+  body('type').optional().isIn(LESSON_TYPES),
+];
 
 export const reorderValidator = (key: 'moduleIds' | 'lessonIds') => [
   body(key).isArray({ min: 1, max: 100 }).withMessage(`${key} must be a list`),

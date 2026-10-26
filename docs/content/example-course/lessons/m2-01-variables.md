@@ -1,5 +1,3 @@
-# Variables and types
-
 ```js
 const name = "Ravi";   // can't be reassigned
 let score = 0;          // can change

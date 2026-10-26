@@ -148,7 +148,7 @@ const runActivation = async (input: ActivationInput, session: ClientSession): Pr
       $set: { status: 'paid', razorpayPaymentId: input.razorpayPaymentId, method: input.method, paidAt: new Date() },
       ...(input.eventId ? { $addToSet: { processedEventIds: input.eventId } } : {}),
     },
-    { new: true, session }
+    { returnDocument: 'after', session }
   );
   if (!payment) return 'already_processed';
 
@@ -303,7 +303,7 @@ export const markRefunded = async (razorpayPaymentId: string) => {
       const payment = await Payment.findOneAndUpdate(
         { razorpayPaymentId, status: 'paid' },
         { $set: { status: 'refunded', refundedAt: new Date(), refundRequired: false } },
-        { new: true, session }
+        { returnDocument: 'after', session }
       );
       if (!payment) return 'already_processed';
       enrollmentId = payment.enrollmentId;

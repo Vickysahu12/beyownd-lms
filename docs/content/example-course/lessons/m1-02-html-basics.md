@@ -1,5 +1,3 @@
-# HTML basics
-
 HTML describes the **structure** of a page.
 
 ```html
