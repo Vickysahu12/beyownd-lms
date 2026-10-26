@@ -119,13 +119,16 @@ const readAssetFile = async (baseDir: string, relative: string): Promise<{ bytes
   const file = path.resolve(root, relative);
   if (!file.startsWith(root + path.sep)) return { error: `"${relative}" points outside the course folder` };
   try {
-    const real = await fs.realpath(file);
-    if (!real.startsWith(root + path.sep)) return { error: `"${relative}" is a link to a file outside the course folder` };
+    // Case check FIRST, from the directory listing: on Linux a wrong-case name
+    // makes realpath fail, which would hide the real reason ("not found")
     const names = await fs.readdir(path.dirname(file));
     if (!names.includes(path.basename(file))) {
       const actual = names.find((n) => n.toLowerCase() === path.basename(file).toLowerCase());
+      if (!actual) return { error: `file "${relative}" not found (paths start from the folder that has course.json)` };
       return { error: `"${relative}" - the file is named "${actual}" (capital letters must match exactly)` };
     }
+    const real = await fs.realpath(file);
+    if (!real.startsWith(root + path.sep)) return { error: `"${relative}" is a link to a file outside the course folder` };
     const stat = await fs.stat(real);
     if (!stat.isFile()) return { error: `"${relative}" is not a file` };
     return { bytes: await fs.readFile(real) };

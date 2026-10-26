@@ -22,11 +22,17 @@ const assertLocal = (uri: string | undefined, name: string) => {
 
 // Fail fast with a clear message instead of hundreds of retry errors
 const assertRedisUp = async () => {
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timeout')), 3000);
+  });
   try {
     await Promise.race([redisClient.ping(), timeout]);
   } catch {
     throw new Error('Redis is not running. Start it with: docker start beyownd-redis');
+  } finally {
+    // An uncleared timer kept Jest alive after the last file ("did not exit")
+    clearTimeout(timer);
   }
 };
 
